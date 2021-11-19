@@ -1,6 +1,13 @@
 {
   "name": "component-app2",
   "version": "0.0.0",
+  "files": ["dist"],
+  "module": "./dist/my-lib.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/my-lib.es.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
