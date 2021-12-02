@@ -1,13 +1,13 @@
 <script setup>
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
-import HelloDiv from "./components/HelloDiv.vue";
+import HelloDiv1 from "./components/HelloDiv1.vue";
 </script>
 
 <template>
   <div>
     <img alt="Vue logo" src="./assets/logo.png" />
-    <hello-div msg="Hello Vue 3 + Vite" />
+    <hello-div-1 msg="Hello Vue 3 + Vite" />
   </div>
 </template>
 

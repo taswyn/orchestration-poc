@@ -9,7 +9,7 @@ const count = ref(0)
 </script>
 
 <template>
-  <div>{{ msg }}</div>
+  <div>Application 1 says {{ msg }}</div>
 </template>
 
 <style scoped>
