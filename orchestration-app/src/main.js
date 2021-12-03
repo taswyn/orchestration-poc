@@ -3,8 +3,12 @@ import App from './App.vue'
 
 const app = createApp(App)
 
-const HelloNavAsync = defineAsyncComponent(async () => {
-    
-})
+const HelloNavAsync = defineAsyncComponent(async () => 
+ importComponent('http://localhost:8200/Navigation.es.js')
+)
 
-createApp(App).mount('#app')
+app.component("hello-nav-async", HelloNavAsync);
+
+app.mount('#app')
+
+//createApp(App).mount('#app')

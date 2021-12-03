@@ -7,8 +7,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: path.resolve(__dirname, 'src/main.js'),
-      name: 'Application1',
-      fileName: (format) => `app1.${format}.js`
+      name: 'Navigation',
+      fileName: (format) => `Navigation.${format}.js`
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled
