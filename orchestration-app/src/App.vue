@@ -7,7 +7,7 @@ import RoutedComponent from "./components/ComponentRouter.vue";
 const test = {
   component: {
     name: "Application1",
-    url: "http://localhost:8200/Application1.es.js",
+    url: "http://localhost:8200/Application1.umd.js",
   },
 };
 const properties = {
