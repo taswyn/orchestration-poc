@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp ./dist/* ../compiled-components",
+    "build": "vite build && copy /y .\\dist\\*.* ..\\compiled-components",
     "serve": "vite preview",
     "component": "vite build [chunkhash]"
   },
