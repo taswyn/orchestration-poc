@@ -1,11 +1,17 @@
-const express = require('express');
-const path = require('path');
+import express from 'express'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import cors from 'cors'
 
+const filename = fileURLToPath(import.meta.url);
+const dirname = path.dirname(filename);
 const PORT = 8200;
 
 const app = express();
 
-app.use(express.static(path.resolve(__dirname, 'compiled-components'), {
+app.use(cors());
+
+app.use(express.static(path.resolve(dirname, 'compiled-components'), {
   maxAge: '365d',
 }));
 
