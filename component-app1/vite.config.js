@@ -6,9 +6,10 @@ import path from 'path'
 export default defineConfig({
   build: {
     lib: {
+      //entry: path.resolve(__dirname, 'src/componenets/HelloDiv1.vue'),
       entry: path.resolve(__dirname, 'src/main.js'),
       name: 'Application1',
-      fileName: (format) => `app1.${format}.js`
+      fileName: (format) => `Application1.${format}.js`
     },
     rollupOptions: {
       // make sure to externalize deps that shouldn't be bundled
