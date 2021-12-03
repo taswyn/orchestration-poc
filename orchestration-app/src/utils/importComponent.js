@@ -5,6 +5,7 @@ export default async function importComponent(url) {
         window[componentName] = await new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.async = true;
+            script.type = "module";
 
             script.addEventListener('load', () => {
               resolve(window[componentName]);
@@ -16,7 +17,7 @@ export default async function importComponent(url) {
             script.id = componentName;
             script.src = url;
             
-            document.head.insertAdjacentElement(script);
+            document.head.insertAdjacentElement('beforeend', script);
           });
     }
   
