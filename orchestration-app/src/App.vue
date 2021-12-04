@@ -6,7 +6,7 @@ import RoutedComponent from "./components/ComponentRouter.vue";
 
 const test = {
   name: "Application1",
-  url: "http://localhost:8200/Application1.es.js",
+  url: "http://localhost:8200/Application1.umd.js",
 };
 const properties = {
   msg: "Testing Application1 Orchestration",

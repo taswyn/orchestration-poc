@@ -1,6 +1,6 @@
 <template>
   <div>Dynamic Component:
-    <Component :is="computedComponent"
+    <Component :is="RoutedComponent"
   v-bind="props" />
   </div>
 </template>
@@ -23,7 +23,7 @@ export default defineComponent({
   },
   data() {
     return {
-      computedComponent: null,
+      RoutedComponent: null,
     };
   },
   watch: {
@@ -32,16 +32,16 @@ export default defineComponent({
       handler(newComponent, prevComponent = '') {
         if (newComponent.url === prevComponent.url) return;
 
-        this.computedComponent = defineAsyncComponent(() => importComponent(this.component.url));
+        this.RoutedComponent = defineAsyncComponent(() => importComponent(this.component.url));
       },
     },
   },
   render () {
   
-  if (!this.computedComponent) {
-    this.computedComponent = defineAsyncComponent(() => importComponent(this.component.url));
+  if (!this.RoutedComponent) {
+    this.RoutedComponent = defineAsyncComponent(() => importComponent(this.component.url));
   }
-    return h(this.computedComponent)
+    return resolveDynamicCompnent('RoutedComponent')
   },
 });
 </script>

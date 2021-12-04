@@ -6,8 +6,8 @@ import path from 'path'
 export default defineConfig({
   build: {
     lib: {
-      //entry: path.resolve(__dirname, 'src/componenets/HelloDiv1.vue'),
-      entry: path.resolve(__dirname, 'src/Application1.vue'),
+      entry: path.resolve(__dirname, 'src/components/HelloDiv1.vue'),
+      // entry: path.resolve(__dirname, 'src/Application1.vue'),
       name: 'Application1',
       fileName: (format) => `Application1.${format}.js`
     },
