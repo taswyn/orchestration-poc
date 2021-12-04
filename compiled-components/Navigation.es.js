@@ -18,7 +18,7 @@ const _sfc_main$1 = {
     };
   }
 };
-var HelloNav = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-351cd2c6"]]);
+var HelloNav = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-4443915a"]]);
 var App_vue_vue_type_style_index_0_lang = "";
 const _sfc_main = {
   setup(__props) {

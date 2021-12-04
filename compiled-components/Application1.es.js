@@ -1559,7 +1559,7 @@ var _export_sfc = (sfc, props) => {
   }
   return sfc;
 };
-const _sfc_main = {
+const _sfc_main$1 = {
   props: {
     msg: String
   },
@@ -1570,5 +1570,17 @@ const _sfc_main = {
     };
   }
 };
-var HelloDiv1 = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-697c6148"]]);
-export { HelloDiv1 as default };
+var HelloDiv1 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-5f81f1a9"]]);
+var Application1_vue_vue_type_style_index_0_lang = "";
+const _hoisted_1 = /* @__PURE__ */ createBaseVNode("p", null, "Application 1 is being told to say ", -1);
+const _sfc_main = {
+  setup(__props) {
+    return (_ctx, _cache) => {
+      return openBlock(), createElementBlock("div", null, [
+        _hoisted_1,
+        createVNode(HelloDiv1, { msg: "Hello Vue 3 + Vite: Application 1" })
+      ]);
+    };
+  }
+};
+export { _sfc_main as default };

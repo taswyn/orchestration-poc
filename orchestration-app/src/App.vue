@@ -11,25 +11,37 @@ const test = {
 const properties = {
   msg: "Testing Application1 Orchestration",
 };
+const nav = {
+  name: "GlobalNavigation",
+  url: "http://localhost:8200/Navigation.umd.js",
+}
 </script>
 
 <template>
-<div>
-  <hello-world msg="Orchestration" />
-  <Suspense>
-    <template #default>
-      <div>
-        <component
-          :is="RoutedComponent"
-          :component="test"
-          :props="properties"
-        />
-      </div>
-    </template>
-    <template #fallback>
-      <div>Loading...</div>
-    </template>
-  </Suspense>
+  <div>
+    <hello-world msg="Orchestration" />
+    <nav>
+      <Suspense>
+        <template #default>
+          <div>
+            <component :is="RoutedComponent" :component="nav" :props="properties" />
+          </div>
+        </template>
+        <template #fallback>
+          <div>Loading...</div>
+        </template>
+      </Suspense>
+    </nav>
+    <Suspense>
+      <template #default>
+        <div>
+          <component :is="RoutedComponent" :component="test" :props="properties" />
+        </div>
+      </template>
+      <template #fallback>
+        <div>Loading...</div>
+      </template>
+    </Suspense>
   </div>
 </template>
 
