@@ -6,9 +6,10 @@
 </template>
 
 <script>
+import { defineComponent, defineAsyncComponent, h } from "vue";
 import importComponent from '../utils/importComponent';
 
-export default {
+export default defineComponent({
   name: 'RoutedComponent',
   props: {
     component: {
@@ -31,9 +32,16 @@ export default {
       handler(newComponent, prevComponent = '') {
         if (newComponent.url === prevComponent.url) return;
 
-        this.computedComponent = () => importComponent(this.component.url);
+        this.computedComponent = defineAsyncComponent(() => importComponent(this.component.url));
       },
     },
   },
-};
+  render () {
+  
+  if (!this.computedComponent) {
+    this.computedComponent = defineAsyncComponent(() => importComponent(this.component.url));
+  }
+    return h(this.computedComponent)
+  },
+});
 </script>

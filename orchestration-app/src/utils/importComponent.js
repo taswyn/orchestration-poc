@@ -1,5 +1,5 @@
 export default async function importComponent(url) {
-    const componentName = url.match(/\/([^\/]*)\.umd.js/)[1];
+    const componentName = url.match(/\/([^\/]*)\.(umd|es).js/)[1];
   
     if (!window[componentName]) {
         window[componentName] = await new Promise((resolve, reject) => {

@@ -5,28 +5,32 @@ import HelloWorld from "./components/HelloWorld.vue";
 import RoutedComponent from "./components/ComponentRouter.vue";
 
 const test = {
-  component: {
-    name: "Application1",
-    url: "http://localhost:8200/Application1.umd.js",
-  },
+  name: "Application1",
+  url: "http://localhost:8200/Application1.es.js",
 };
 const properties = {
-    msg: "Testing Application1 Orchestration"
-}
+  msg: "Testing Application1 Orchestration",
+};
 </script>
 
 <template>
+<div>
+  <hello-world msg="Orchestration" />
   <Suspense>
     <template #default>
       <div>
-        <hello-world msg="Orchestration" />
-        <routed-component :component="test.component" :props="properties" />
+        <component
+          :is="RoutedComponent"
+          :component="test"
+          :props="properties"
+        />
       </div>
     </template>
     <template #fallback>
       <div>Loading...</div>
     </template>
   </Suspense>
+  </div>
 </template>
 
 <style>
