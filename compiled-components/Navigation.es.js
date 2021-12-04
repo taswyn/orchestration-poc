@@ -976,9 +976,6 @@ function setupBlock(vnode) {
 function createElementBlock(type, props, children, patchFlag, dynamicProps, shapeFlag) {
   return setupBlock(createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, true));
 }
-function createBlock(type, props, children, patchFlag, dynamicProps) {
-  return setupBlock(createVNode(type, props, children, patchFlag, dynamicProps, true));
-}
 function isVNode(value) {
   return value ? value.__v_isVNode === true : false;
 }
@@ -1576,10 +1573,20 @@ const _sfc_main$1 = {
 };
 var HelloNav = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-4443915a"]]);
 var App_vue_vue_type_style_index_0_lang = "";
+const _hoisted_1 = /* @__PURE__ */ createBaseVNode("p", null, "Global Navigation says:", -1);
+const _hoisted_2 = /* @__PURE__ */ createBaseVNode("p", null, "Global Navigation was told to say:", -1);
 const _sfc_main = {
+  props: {
+    msg: String
+  },
   setup(__props) {
     return (_ctx, _cache) => {
-      return openBlock(), createBlock(HelloNav, { msg: "Hello Vue 3 + Vite" });
+      return openBlock(), createElementBlock("div", null, [
+        _hoisted_1,
+        createVNode(HelloNav, { msg: "Hello Vue 3 + Vite" }),
+        _hoisted_2,
+        createVNode(HelloNav, { msg: __props.msg }, null, 8, ["msg"])
+      ]);
     };
   }
 };

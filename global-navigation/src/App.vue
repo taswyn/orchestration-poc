@@ -2,10 +2,19 @@
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
 import HelloNav from './components/HelloNav.vue'
+
+defineProps({
+  msg: String
+})
 </script>
 
 <template>
-  <hello-nav msg="Hello Vue 3 + Vite" />
+  <div>
+    <p>Global Navigation says:</p>
+    <hello-nav msg="Hello Vue 3 + Vite" />
+    <p>Global Navigation was told to say:</p>
+    <hello-nav v-bind:msg="msg" />
+  </div>
 </template>
 
 <style>

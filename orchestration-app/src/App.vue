@@ -8,23 +8,37 @@ const test = {
   name: "Application1",
   url: "http://localhost:8200/Application1.umd.js",
 };
-const properties = {
+const Application1Properties = {
   msg: "Testing Application1 Orchestration",
 };
+const NavigationProperties = {
+  msg: "Application list goes here!"
+}
 const nav = {
   name: "GlobalNavigation",
   url: "http://localhost:8200/Navigation.umd.js",
 }
+
+/****
+ * notes: when msg is provided here, it overrides msg in GlobalNav 
+ * even without it being a prop for App.vue
+ * 
+ * When msg is NOT provided here, it gets written by App.vue in GlobalNav
+ * 
+ * When the root element in GlobalNav's App.vue is NOT the component, msg goes on the root element instead!
+ * 
+ */
+
+
 </script>
 
 <template>
   <div>
-    <hello-world msg="Orchestration" />
     <nav>
       <Suspense>
         <template #default>
           <div>
-            <component :is="RoutedComponent" :component="nav" :props="properties" />
+            <component :is="RoutedComponent" :component="nav" :props="NavigationProperties" />
           </div>
         </template>
         <template #fallback>
@@ -32,10 +46,11 @@ const nav = {
         </template>
       </Suspense>
     </nav>
+    <hello-world msg="Orchestration" />
     <Suspense>
       <template #default>
         <div>
-          <component :is="RoutedComponent" :component="test" :props="properties" />
+          <component :is="RoutedComponent" :component="test" :props="Application1Properties" />
         </div>
       </template>
       <template #fallback>
