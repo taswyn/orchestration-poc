@@ -1,7 +1,9 @@
 {
   "name": "component-app2",
   "version": "0.0.0",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "module": "./dist/my-lib.es.js",
   "exports": {
     ".": {
@@ -9,15 +11,19 @@
     }
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others \"npm run json-server\" \"npm run vite-dev",
+    "vite-dev": "vite",
     "build": "vite build && copy /y .\\dist\\*.* ..\\compiled-components",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "json-server": "json-server --watch src/assets/data.json --port 3064"
   },
   "dependencies": {
     "vue": "^3.2.16"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^1.9.3",
+    "concurrently": "^6.4.0",
+    "json-server": "^0.17.0",
     "vite": "^2.6.4"
   }
 }
