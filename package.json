@@ -5,11 +5,17 @@
     "express": "^4.17.1"
   },
   "scripts": {
+    "dev": "concurrently --kill-others \"npm run json-server\" \"npm run serve",
     "build": "npm run buildapp1 && npm run buildapp2 && npm run buildnav && npm run buildorchestration",
     "buildapp1": "npm run build --prefix ./component-app1",
     "buildapp2": "npm run build --prefix ./component-app2",
     "buildnav": "npm run build --prefix ./global-navigation",
     "buildorchestration": "npm run build --prefix ./orchestration-app",
-    "serve": "node server.js"
+    "serve": "node src/server.js",
+    "json-server": "json-server --watch src/assets/global-structure.json --port 3075"
+  },
+  "devDependencies": {
+    "concurrently": "^6.4.0",
+    "json-server": "^0.17.0"
   }
 }

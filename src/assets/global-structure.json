@@ -1,0 +1,20 @@
+{
+    "applications" : [
+        {
+            "mapID" : 1,
+            "name": "Text",
+            "URI": "http://localhost:8200/Application1.umd.js"
+        },
+        {
+            "mapID" : 2,
+            "name": "Cards",
+            "URI": "http://localhost:8200/Application2.umd.js"
+        }
+    ],
+    "components" : [
+        {
+            "name": "Navigation",
+            "URI": "http://localhost:8200/Navigation.umd.js"
+        }
+    ]
+}
