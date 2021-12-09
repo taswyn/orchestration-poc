@@ -38,7 +38,7 @@ watch(
     </div>
   </div>
   <div v-if="cards">
-    <router-link :key="id" :to="{ name: 'card.title', params: { id: id } }">
+    <router-link :key="id" :to="{ name: 'card.show', params: { id: id } }">
       <router-view :cards="cards"></router-view>
     </router-link>
   </div>
@@ -59,7 +59,7 @@ export default {
   async created() {
     this.getCardData()
     this.$watch(
-      () => this.$route.params.name,
+      () => this.$route.matched.name,
       async () => this.getCardData()
     )
   }

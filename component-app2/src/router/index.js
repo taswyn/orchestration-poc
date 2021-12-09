@@ -25,7 +25,7 @@ const routes = [
     },
     {
         path: '/card/:id/',
-        name: 'card.title',
+        name: 'card.show',
         component: () => import('@/views/SingleCard.vue'),
         props: route => ({
             ...route.params,

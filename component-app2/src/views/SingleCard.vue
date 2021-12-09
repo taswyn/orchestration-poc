@@ -1,11 +1,13 @@
 <script setup>
+import UpNav from '@/components/UpNav.vue'
 defineProps({
   id: Number
 })
 </script>
 
 <template>
-    <div>
+    <UpNav></UpNav>
+    <div v-if="card">
         <div class="card">
             <header class="card-header">
                 <h3 class="card-header-title">
@@ -26,18 +28,18 @@ defineProps({
 export default {
   data() {
     return {
-      cards: null
+      card: null
     }
   },
   methods: {
     async getCardData() {
-      this.cards = await fetch(`http://localhost:3064/cards`).then(response => response.json())
+      this.card = await fetch(`http://localhost:3064/cards/${this.id}`).then(response => response.json())
     }
   },
   async created() {
     this.getCardData()
     this.$watch(
-      () => this.$route.params.name,
+      () => this.$route.params.id,
       async () => this.getCardData()
     )
   }
