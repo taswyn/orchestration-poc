@@ -18,7 +18,10 @@
     "json-server": "json-server --watch src/assets/data.json --port 3064"
   },
   "dependencies": {
-    "vue": "^3.2.16"
+    "bulma": "^0.9.3",
+    "bulma-start": "^0.0.4",
+    "vue": "^3.2.16",
+    "vue-router": "^4.0.12"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^1.9.3",

@@ -1,20 +1,23 @@
 <script setup>
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
-import HelloDiv2 from './components/HelloDiv2.vue'
+import RouteView from '@/components/RouteView.vue'
+import AppHome from '@/views/AppHome.vue'
 </script>
 
 <template>
-  <hello-div-2 msg="Hello Vue 3 + Vite" />
-</template>
+  <div class="container">
+    <section class="section">
+      <div class="tile">
+        <div class="tile is-vertical">
+          <div class="tile is-ancestor">
+            <div class="tile is-child is-4 notification is-warning">This is Application 2: Cards</div>
+            <div class="tile is-child is-8 notification is-secondary">Current route: <RouteView /></div>
+          </div>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
+          <div class="tile notification is-child is-danger">
+            <router-view></router-view>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>

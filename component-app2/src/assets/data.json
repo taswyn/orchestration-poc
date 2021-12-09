@@ -1,0 +1,35 @@
+{
+    "cards": [
+        {
+            "id" : 0,
+            "title" : "Fall Road",
+            "image": {
+                "filename": "pexels-yunus-tuğ-7485147.jpg",
+                "alt": "Green and Yellow Trees Beside Road",
+                "attribution": "https://www.pexels.com/@yunustug"
+            },
+            "description": ""
+
+        },
+        {
+            "id" : 1,
+            "title": "Lost Plants",
+            "image": {
+                "filename": "pexels-alyona-yambakova-8664195.jpg",
+                "alt": "Green Fern Plant",
+                "attribution": "https://www.pexels.com/@alyona-yambakova-77758441"
+            },
+            "description": ""
+        },
+        {
+            "id" : 2,
+            "title": "Three Trees",
+            "image": {
+                "filename": "pexels-yunus-tuğ-7473089.jpg",
+                "alt": "Green Grass Field Near Green Trees Under Blue Sky",
+                "attribution": "https://www.pexels.com/@yunustug"
+            },
+            "description": ""
+        }
+    ]
+}
