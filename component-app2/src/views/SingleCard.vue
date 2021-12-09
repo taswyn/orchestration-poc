@@ -15,7 +15,7 @@ defineProps({
                 </h3>
             </header>
             <figure class="card-image">
-                <img :src="`/images/${card.image.url}`" :alt="card.image.alt" />
+                <img :src="`/images/${card.image.filename}`" :alt="card.image.alt" />
             </figure>
             <div class="card-content">
                 <p>{{ card.description }}</p>
