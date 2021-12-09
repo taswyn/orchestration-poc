@@ -1,33 +1,47 @@
 <script setup>
 import NavCard from './NavCard.vue'
+import { useRoute } from 'vue-router'
+import { ref, watch } from 'vue'
+
 defineProps({
   title: String,
-  card: Object
+  card: Object,
+  id: Number
 })
 
-// watch(
-//   () => this.$route.name,
-//   async () => this.getCardData()
-// )
+/* const $route = useRoute()
+const cardID = ref()
+cardID.value = $route.params.id
+
+watch(
+  () => $route.params.id,
+  newId => {
+    cardID.value = parseInt(newId)
+    console.log(newId)
+  }
+) */
 </script>
 
 <template>
-  <section>
-    <h2>{{ title }}</h2>
+  <div>
+    <h3>{{ title }}</h3>
     <div v-if="cards">
-      <div v-for="card in cards" :key="card.title">{{ card.title }}</div>
-      <router-link
-        v-for="card in cards"
-        :key="card.title"
-        :to="{ name: 'card.scroll', params: { id: card.id, card: card } }"
-      >
-        {{ card.title }}
-      </router-link>
+      <nav class="tile is-parent">
+        <router-link
+          v-for="card in cards"
+          :key="card.title"
+          :to="{ name: 'card.scroll', params: { id: card.id } }"
+        >
+          <NavCard :card="card"></NavCard>
+        </router-link>
+      </nav>
     </div>
-  </section>
-  <section>
-    <router-view></router-view>
-  </section>
+  </div>
+  <div v-if="cards">
+    <router-link :key="id" :to="{ name: 'card.title', params: { id: id } }">
+      <router-view :cards="cards"></router-view>
+    </router-link>
+  </div>
 </template>
 
 <script>

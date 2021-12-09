@@ -1,23 +1,12 @@
 <script setup>
 defineProps({
-  card: Object
+    card: Object,
+    id: Number
 })
 </script>
 
 <template>
-    <section>
-        <div class="card">
-            <header class="card-header">
-                <h2 class="card-header-title">
-                    {{ card.title }}
-                </h2>
-            </header>
-            <figure class="card-image">
-                <img :src="`/images/${card.image.filename}`" :alt="card.image.alt" />
-            </figure>
-            <div class="card-content">
-                <p>{{ card.description.short }}</p>
-            </div>
-        </div>
-    </section>
+    <div class="tile is-child notification is-warning">
+        <h3 class="card-header-title">{{ card.title }}</h3>
+    </div>
 </template>

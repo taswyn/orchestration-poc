@@ -1,17 +1,16 @@
 <script setup>
 defineProps({
-  card: Object,
   id: Number
 })
 </script>
 
 <template>
-    <section>
+    <div>
         <div class="card">
             <header class="card-header">
-                <h2 class="card-header-title">
+                <h3 class="card-header-title">
                     {{ card.title }}
-                </h2>
+                </h3>
             </header>
             <figure class="card-image">
                 <img :src="`/images/${card.image.url}`" :alt="card.image.alt" />
@@ -20,5 +19,27 @@ defineProps({
                 <p>{{ card.description }}</p>
             </div>
         </div>
-    </section>
+    </div>
 </template>
+
+<script>
+export default {
+  data() {
+    return {
+      cards: null
+    }
+  },
+  methods: {
+    async getCardData() {
+      this.cards = await fetch(`http://localhost:3064/cards`).then(response => response.json())
+    }
+  },
+  async created() {
+    this.getCardData()
+    this.$watch(
+      () => this.$route.params.name,
+      async () => this.getCardData()
+    )
+  }
+}
+</script>
