@@ -1,23 +1,1004 @@
-var __defProp = Object.defineProperty;
-var __defProps = Object.defineProperties;
-var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
-var __getOwnPropSymbols = Object.getOwnPropertySymbols;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __spreadValues = (a, b) => {
-  for (var prop in b || (b = {}))
-    if (__hasOwnProp.call(b, prop))
-      __defNormalProp(a, prop, b[prop]);
-  if (__getOwnPropSymbols)
-    for (var prop of __getOwnPropSymbols(b)) {
-      if (__propIsEnum.call(b, prop))
-        __defNormalProp(a, prop, b[prop]);
+function normalizeStyle(value) {
+  if (isArray(value)) {
+    const res = {};
+    for (let i = 0; i < value.length; i++) {
+      const item = value[i];
+      const normalized = isString(item) ? parseStringStyle(item) : normalizeStyle(item);
+      if (normalized) {
+        for (const key in normalized) {
+          res[key] = normalized[key];
+        }
+      }
     }
-  return a;
+    return res;
+  } else if (isString(value)) {
+    return value;
+  } else if (isObject(value)) {
+    return value;
+  }
+}
+const listDelimiterRE = /;(?![^(]*\))/g;
+const propertyDelimiterRE = /:(.+)/;
+function parseStringStyle(cssText) {
+  const ret = {};
+  cssText.split(listDelimiterRE).forEach((item) => {
+    if (item) {
+      const tmp = item.split(propertyDelimiterRE);
+      tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim());
+    }
+  });
+  return ret;
+}
+function normalizeClass(value) {
+  let res = "";
+  if (isString(value)) {
+    res = value;
+  } else if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      const normalized = normalizeClass(value[i]);
+      if (normalized) {
+        res += normalized + " ";
+      }
+    }
+  } else if (isObject(value)) {
+    for (const name in value) {
+      if (value[name]) {
+        res += name + " ";
+      }
+    }
+  }
+  return res.trim();
+}
+const toDisplayString = (val) => {
+  return val == null ? "" : isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? JSON.stringify(val, replacer, 2) : String(val);
 };
-var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
-import { openBlock, createElementBlock, toDisplayString, createElementVNode, shallowRef, unref, computed, reactive, nextTick, inject, defineComponent, h, provide, ref, watch, resolveComponent, Fragment, renderList, createBlock, withCtx, createVNode, createCommentVNode, Suspense, createTextVNode, createApp } from "vue";
+const replacer = (_key, val) => {
+  if (val && val.__v_isRef) {
+    return replacer(_key, val.value);
+  } else if (isMap(val)) {
+    return {
+      [`Map(${val.size})`]: [...val.entries()].reduce((entries, [key, val2]) => {
+        entries[`${key} =>`] = val2;
+        return entries;
+      }, {})
+    };
+  } else if (isSet(val)) {
+    return {
+      [`Set(${val.size})`]: [...val.values()]
+    };
+  } else if (isObject(val) && !isArray(val) && !isPlainObject(val)) {
+    return String(val);
+  }
+  return val;
+};
+const EMPTY_OBJ = {};
+const EMPTY_ARR = [];
+const NOOP = () => {
+};
+const onRE = /^on[^a-z]/;
+const isOn = (key) => onRE.test(key);
+const extend = Object.assign;
+const remove = (arr, el) => {
+  const i = arr.indexOf(el);
+  if (i > -1) {
+    arr.splice(i, 1);
+  }
+};
+const isArray = Array.isArray;
+const isMap = (val) => toTypeString(val) === "[object Map]";
+const isSet = (val) => toTypeString(val) === "[object Set]";
+const isFunction = (val) => typeof val === "function";
+const isString = (val) => typeof val === "string";
+const isSymbol = (val) => typeof val === "symbol";
+const isObject = (val) => val !== null && typeof val === "object";
+const isPromise = (val) => {
+  return isObject(val) && isFunction(val.then) && isFunction(val.catch);
+};
+const objectToString = Object.prototype.toString;
+const toTypeString = (value) => objectToString.call(value);
+const isPlainObject = (val) => toTypeString(val) === "[object Object]";
+const cacheStringFunction = (fn) => {
+  const cache = Object.create(null);
+  return (str) => {
+    const hit = cache[str];
+    return hit || (cache[str] = fn(str));
+  };
+};
+const camelizeRE = /-(\w)/g;
+const camelize = cacheStringFunction((str) => {
+  return str.replace(camelizeRE, (_, c) => c ? c.toUpperCase() : "");
+});
+const capitalize = cacheStringFunction((str) => str.charAt(0).toUpperCase() + str.slice(1));
+const hasChanged = (value, oldValue) => !Object.is(value, oldValue);
+const def = (obj, key, value) => {
+  Object.defineProperty(obj, key, {
+    configurable: true,
+    enumerable: false,
+    value
+  });
+};
+let activeEffectScope;
+function recordEffectScope(effect, scope) {
+  scope = scope || activeEffectScope;
+  if (scope && scope.active) {
+    scope.effects.push(effect);
+  }
+}
+const wasTracked = (dep) => (dep.w & trackOpBit) > 0;
+const newTracked = (dep) => (dep.n & trackOpBit) > 0;
+const initDepMarkers = ({ deps }) => {
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].w |= trackOpBit;
+    }
+  }
+};
+const finalizeDepMarkers = (effect) => {
+  const { deps } = effect;
+  if (deps.length) {
+    let ptr = 0;
+    for (let i = 0; i < deps.length; i++) {
+      const dep = deps[i];
+      if (wasTracked(dep) && !newTracked(dep)) {
+        dep.delete(effect);
+      } else {
+        deps[ptr++] = dep;
+      }
+      dep.w &= ~trackOpBit;
+      dep.n &= ~trackOpBit;
+    }
+    deps.length = ptr;
+  }
+};
+let effectTrackDepth = 0;
+let trackOpBit = 1;
+const maxMarkerBits = 30;
+const effectStack = [];
+let activeEffect;
+class ReactiveEffect {
+  constructor(fn, scheduler = null, scope) {
+    this.fn = fn;
+    this.scheduler = scheduler;
+    this.active = true;
+    this.deps = [];
+    recordEffectScope(this, scope);
+  }
+  run() {
+    if (!this.active) {
+      return this.fn();
+    }
+    if (!effectStack.includes(this)) {
+      try {
+        effectStack.push(activeEffect = this);
+        enableTracking();
+        trackOpBit = 1 << ++effectTrackDepth;
+        if (effectTrackDepth <= maxMarkerBits) {
+          initDepMarkers(this);
+        } else {
+          cleanupEffect(this);
+        }
+        return this.fn();
+      } finally {
+        if (effectTrackDepth <= maxMarkerBits) {
+          finalizeDepMarkers(this);
+        }
+        trackOpBit = 1 << --effectTrackDepth;
+        effectStack.pop();
+        const n = effectStack.length;
+        activeEffect = n > 0 ? effectStack[n - 1] : void 0;
+      }
+    }
+  }
+  stop() {
+    if (this.active) {
+      cleanupEffect(this);
+      if (this.onStop) {
+        this.onStop();
+      }
+      this.active = false;
+    }
+  }
+}
+function cleanupEffect(effect) {
+  const { deps } = effect;
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect);
+    }
+    deps.length = 0;
+  }
+}
+function enableTracking() {
+}
+new Set(Object.getOwnPropertyNames(Symbol).map((key) => Symbol[key]).filter(isSymbol));
+function isReactive(value) {
+  if (isReadonly(value)) {
+    return isReactive(value["__v_raw"]);
+  }
+  return !!(value && value["__v_isReactive"]);
+}
+function isReadonly(value) {
+  return !!(value && value["__v_isReadonly"]);
+}
+function isProxy(value) {
+  return isReactive(value) || isReadonly(value);
+}
+function markRaw(value) {
+  def(value, "__v_skip", true);
+  return value;
+}
+function isRef(r) {
+  return Boolean(r && r.__v_isRef === true);
+}
+function unref(ref) {
+  return isRef(ref) ? ref.value : ref;
+}
+const shallowUnwrapHandlers = {
+  get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
+  set: (target, key, value, receiver) => {
+    const oldValue = target[key];
+    if (isRef(oldValue) && !isRef(value)) {
+      oldValue.value = value;
+      return true;
+    } else {
+      return Reflect.set(target, key, value, receiver);
+    }
+  }
+};
+function proxyRefs(objectWithRefs) {
+  return isReactive(objectWithRefs) ? objectWithRefs : new Proxy(objectWithRefs, shallowUnwrapHandlers);
+}
+Promise.resolve();
+let currentRenderingInstance = null;
+let currentScopeId = null;
+const isSuspense = (type) => type.__isSuspense;
+function queueEffectWithSuspense(fn, suspense) {
+  if (suspense && suspense.pendingBranch) {
+    if (isArray(fn)) {
+      suspense.effects.push(...fn);
+    } else {
+      suspense.effects.push(fn);
+    }
+  } else {
+    queuePostFlushCb(fn);
+  }
+}
+function resolveMergedOptions(instance) {
+  const base = instance.type;
+  const { mixins, extends: extendsOptions } = base;
+  const { mixins: globalMixins, optionsCache: cache, config: { optionMergeStrategies } } = instance.appContext;
+  const cached = cache.get(base);
+  let resolved;
+  if (cached) {
+    resolved = cached;
+  } else if (!globalMixins.length && !mixins && !extendsOptions) {
+    {
+      resolved = base;
+    }
+  } else {
+    resolved = {};
+    if (globalMixins.length) {
+      globalMixins.forEach((m) => mergeOptions(resolved, m, optionMergeStrategies, true));
+    }
+    mergeOptions(resolved, base, optionMergeStrategies);
+  }
+  cache.set(base, resolved);
+  return resolved;
+}
+function mergeOptions(to, from, strats, asMixin = false) {
+  const { mixins, extends: extendsOptions } = from;
+  if (extendsOptions) {
+    mergeOptions(to, extendsOptions, strats, true);
+  }
+  if (mixins) {
+    mixins.forEach((m) => mergeOptions(to, m, strats, true));
+  }
+  for (const key in from) {
+    if (asMixin && key === "expose")
+      ;
+    else {
+      const strat = internalOptionMergeStrats[key] || strats && strats[key];
+      to[key] = strat ? strat(to[key], from[key]) : from[key];
+    }
+  }
+  return to;
+}
+const internalOptionMergeStrats = {
+  data: mergeDataFn,
+  props: mergeObjectOptions,
+  emits: mergeObjectOptions,
+  methods: mergeObjectOptions,
+  computed: mergeObjectOptions,
+  beforeCreate: mergeAsArray,
+  created: mergeAsArray,
+  beforeMount: mergeAsArray,
+  mounted: mergeAsArray,
+  beforeUpdate: mergeAsArray,
+  updated: mergeAsArray,
+  beforeDestroy: mergeAsArray,
+  beforeUnmount: mergeAsArray,
+  destroyed: mergeAsArray,
+  unmounted: mergeAsArray,
+  activated: mergeAsArray,
+  deactivated: mergeAsArray,
+  errorCaptured: mergeAsArray,
+  serverPrefetch: mergeAsArray,
+  components: mergeObjectOptions,
+  directives: mergeObjectOptions,
+  watch: mergeWatchOptions,
+  provide: mergeDataFn,
+  inject: mergeInject
+};
+function mergeDataFn(to, from) {
+  if (!from) {
+    return to;
+  }
+  if (!to) {
+    return from;
+  }
+  return function mergedDataFn() {
+    return extend(isFunction(to) ? to.call(this, this) : to, isFunction(from) ? from.call(this, this) : from);
+  };
+}
+function mergeInject(to, from) {
+  return mergeObjectOptions(normalizeInject(to), normalizeInject(from));
+}
+function normalizeInject(raw) {
+  if (isArray(raw)) {
+    const res = {};
+    for (let i = 0; i < raw.length; i++) {
+      res[raw[i]] = raw[i];
+    }
+    return res;
+  }
+  return raw;
+}
+function mergeAsArray(to, from) {
+  return to ? [...new Set([].concat(to, from))] : from;
+}
+function mergeObjectOptions(to, from) {
+  return to ? extend(extend(Object.create(null), to), from) : from;
+}
+function mergeWatchOptions(to, from) {
+  if (!to)
+    return from;
+  if (!from)
+    return to;
+  const merged = extend(Object.create(null), to);
+  for (const key in from) {
+    merged[key] = mergeAsArray(to[key], from[key]);
+  }
+  return merged;
+}
+const queuePostRenderEffect = queueEffectWithSuspense;
+const isTeleport = (type) => type.__isTeleport;
+const COMPONENTS = "components";
+function resolveComponent(name, maybeSelfReference) {
+  return resolveAsset(COMPONENTS, name, true, maybeSelfReference) || name;
+}
+const NULL_DYNAMIC_COMPONENT = Symbol();
+function resolveAsset(type, name, warnMissing = true, maybeSelfReference = false) {
+  const instance = currentRenderingInstance || currentInstance;
+  if (instance) {
+    const Component = instance.type;
+    if (type === COMPONENTS) {
+      const selfName = getComponentName(Component);
+      if (selfName && (selfName === name || selfName === camelize(name) || selfName === capitalize(camelize(name)))) {
+        return Component;
+      }
+    }
+    const res = resolve(instance[type] || Component[type], name) || resolve(instance.appContext[type], name);
+    if (!res && maybeSelfReference) {
+      return Component;
+    }
+    return res;
+  }
+}
+function resolve(registry, name) {
+  return registry && (registry[name] || registry[camelize(name)] || registry[capitalize(camelize(name))]);
+}
+const Fragment = Symbol(void 0);
+const Text = Symbol(void 0);
+const Comment = Symbol(void 0);
+const blockStack = [];
+let currentBlock = null;
+function openBlock(disableTracking = false) {
+  blockStack.push(currentBlock = disableTracking ? null : []);
+}
+function closeBlock() {
+  blockStack.pop();
+  currentBlock = blockStack[blockStack.length - 1] || null;
+}
+function setupBlock(vnode) {
+  vnode.dynamicChildren = currentBlock || EMPTY_ARR;
+  closeBlock();
+  if (currentBlock) {
+    currentBlock.push(vnode);
+  }
+  return vnode;
+}
+function createElementBlock(type, props, children, patchFlag, dynamicProps, shapeFlag) {
+  return setupBlock(createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, true));
+}
+function isVNode(value) {
+  return value ? value.__v_isVNode === true : false;
+}
+const InternalObjectKey = `__vInternal`;
+const normalizeKey = ({ key }) => key != null ? key : null;
+const normalizeRef = ({ ref }) => {
+  return ref != null ? isString(ref) || isRef(ref) || isFunction(ref) ? { i: currentRenderingInstance, r: ref } : ref : null;
+};
+function createBaseVNode(type, props = null, children = null, patchFlag = 0, dynamicProps = null, shapeFlag = type === Fragment ? 0 : 1, isBlockNode = false, needFullChildrenNormalization = false) {
+  const vnode = {
+    __v_isVNode: true,
+    __v_skip: true,
+    type,
+    props,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
+    scopeId: currentScopeId,
+    slotScopeIds: null,
+    children,
+    component: null,
+    suspense: null,
+    ssContent: null,
+    ssFallback: null,
+    dirs: null,
+    transition: null,
+    el: null,
+    anchor: null,
+    target: null,
+    targetAnchor: null,
+    staticCount: 0,
+    shapeFlag,
+    patchFlag,
+    dynamicProps,
+    dynamicChildren: null,
+    appContext: null
+  };
+  if (needFullChildrenNormalization) {
+    normalizeChildren(vnode, children);
+    if (shapeFlag & 128) {
+      type.normalize(vnode);
+    }
+  } else if (children) {
+    vnode.shapeFlag |= isString(children) ? 8 : 16;
+  }
+  if (!isBlockNode && currentBlock && (vnode.patchFlag > 0 || shapeFlag & 6) && vnode.patchFlag !== 32) {
+    currentBlock.push(vnode);
+  }
+  return vnode;
+}
+const createVNode = _createVNode;
+function _createVNode(type, props = null, children = null, patchFlag = 0, dynamicProps = null, isBlockNode = false) {
+  if (!type || type === NULL_DYNAMIC_COMPONENT) {
+    type = Comment;
+  }
+  if (isVNode(type)) {
+    const cloned = cloneVNode(type, props, true);
+    if (children) {
+      normalizeChildren(cloned, children);
+    }
+    return cloned;
+  }
+  if (isClassComponent(type)) {
+    type = type.__vccOpts;
+  }
+  if (props) {
+    props = guardReactiveProps(props);
+    let { class: klass, style } = props;
+    if (klass && !isString(klass)) {
+      props.class = normalizeClass(klass);
+    }
+    if (isObject(style)) {
+      if (isProxy(style) && !isArray(style)) {
+        style = extend({}, style);
+      }
+      props.style = normalizeStyle(style);
+    }
+  }
+  const shapeFlag = isString(type) ? 1 : isSuspense(type) ? 128 : isTeleport(type) ? 64 : isObject(type) ? 4 : isFunction(type) ? 2 : 0;
+  return createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, isBlockNode, true);
+}
+function guardReactiveProps(props) {
+  if (!props)
+    return null;
+  return isProxy(props) || InternalObjectKey in props ? extend({}, props) : props;
+}
+function cloneVNode(vnode, extraProps, mergeRef = false) {
+  const { props, ref, patchFlag, children } = vnode;
+  const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props;
+  const cloned = {
+    __v_isVNode: true,
+    __v_skip: true,
+    type: vnode.type,
+    props: mergedProps,
+    key: mergedProps && normalizeKey(mergedProps),
+    ref: extraProps && extraProps.ref ? mergeRef && ref ? isArray(ref) ? ref.concat(normalizeRef(extraProps)) : [ref, normalizeRef(extraProps)] : normalizeRef(extraProps) : ref,
+    scopeId: vnode.scopeId,
+    slotScopeIds: vnode.slotScopeIds,
+    children,
+    target: vnode.target,
+    targetAnchor: vnode.targetAnchor,
+    staticCount: vnode.staticCount,
+    shapeFlag: vnode.shapeFlag,
+    patchFlag: extraProps && vnode.type !== Fragment ? patchFlag === -1 ? 16 : patchFlag | 16 : patchFlag,
+    dynamicProps: vnode.dynamicProps,
+    dynamicChildren: vnode.dynamicChildren,
+    appContext: vnode.appContext,
+    dirs: vnode.dirs,
+    transition: vnode.transition,
+    component: vnode.component,
+    suspense: vnode.suspense,
+    ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
+    ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    el: vnode.el,
+    anchor: vnode.anchor
+  };
+  return cloned;
+}
+function createTextVNode(text = " ", flag = 0) {
+  return createVNode(Text, null, text, flag);
+}
+function normalizeChildren(vnode, children) {
+  let type = 0;
+  const { shapeFlag } = vnode;
+  if (children == null) {
+    children = null;
+  } else if (isArray(children)) {
+    type = 16;
+  } else if (typeof children === "object") {
+    if (shapeFlag & (1 | 64)) {
+      const slot = children.default;
+      if (slot) {
+        slot._c && (slot._d = false);
+        normalizeChildren(vnode, slot());
+        slot._c && (slot._d = true);
+      }
+      return;
+    } else {
+      type = 32;
+      const slotFlag = children._;
+      if (!slotFlag && !(InternalObjectKey in children)) {
+        children._ctx = currentRenderingInstance;
+      } else if (slotFlag === 3 && currentRenderingInstance) {
+        if (currentRenderingInstance.slots._ === 1) {
+          children._ = 1;
+        } else {
+          children._ = 2;
+          vnode.patchFlag |= 1024;
+        }
+      }
+    }
+  } else if (isFunction(children)) {
+    children = { default: children, _ctx: currentRenderingInstance };
+    type = 32;
+  } else {
+    children = String(children);
+    if (shapeFlag & 64) {
+      type = 16;
+      children = [createTextVNode(children)];
+    } else {
+      type = 8;
+    }
+  }
+  vnode.children = children;
+  vnode.shapeFlag |= type;
+}
+function mergeProps(...args) {
+  const ret = {};
+  for (let i = 0; i < args.length; i++) {
+    const toMerge = args[i];
+    for (const key in toMerge) {
+      if (key === "class") {
+        if (ret.class !== toMerge.class) {
+          ret.class = normalizeClass([ret.class, toMerge.class]);
+        }
+      } else if (key === "style") {
+        ret.style = normalizeStyle([ret.style, toMerge.style]);
+      } else if (isOn(key)) {
+        const existing = ret[key];
+        const incoming = toMerge[key];
+        if (existing !== incoming && !(isArray(existing) && existing.includes(incoming))) {
+          ret[key] = existing ? [].concat(existing, incoming) : incoming;
+        }
+      } else if (key !== "") {
+        ret[key] = toMerge[key];
+      }
+    }
+  }
+  return ret;
+}
+const getPublicInstance = (i) => {
+  if (!i)
+    return null;
+  if (isStatefulComponent(i))
+    return getExposeProxy(i) || i.proxy;
+  return getPublicInstance(i.parent);
+};
+const publicPropertiesMap = extend(Object.create(null), {
+  $: (i) => i,
+  $el: (i) => i.vnode.el,
+  $data: (i) => i.data,
+  $props: (i) => i.props,
+  $attrs: (i) => i.attrs,
+  $slots: (i) => i.slots,
+  $refs: (i) => i.refs,
+  $parent: (i) => getPublicInstance(i.parent),
+  $root: (i) => getPublicInstance(i.root),
+  $emit: (i) => i.emit,
+  $options: (i) => resolveMergedOptions(i),
+  $forceUpdate: (i) => () => queueJob(i.update),
+  $nextTick: (i) => nextTick.bind(i.proxy),
+  $watch: (i) => instanceWatch.bind(i)
+});
+let currentInstance = null;
+const setCurrentInstance = (instance) => {
+  currentInstance = instance;
+  instance.scope.on();
+};
+const unsetCurrentInstance = () => {
+  currentInstance && currentInstance.scope.off();
+  currentInstance = null;
+};
+function isStatefulComponent(instance) {
+  return instance.vnode.shapeFlag & 4;
+}
+function getExposeProxy(instance) {
+  if (instance.exposed) {
+    return instance.exposeProxy || (instance.exposeProxy = new Proxy(proxyRefs(markRaw(instance.exposed)), {
+      get(target, key) {
+        if (key in target) {
+          return target[key];
+        } else if (key in publicPropertiesMap) {
+          return publicPropertiesMap[key](instance);
+        }
+      }
+    }));
+  }
+}
+function getComponentName(Component) {
+  return isFunction(Component) ? Component.displayName || Component.name : Component.name;
+}
+function isClassComponent(value) {
+  return isFunction(value) && "__vccOpts" in value;
+}
+function callWithErrorHandling(fn, instance, type, args) {
+  let res;
+  try {
+    res = args ? fn(...args) : fn();
+  } catch (err) {
+    handleError(err, instance, type);
+  }
+  return res;
+}
+function callWithAsyncErrorHandling(fn, instance, type, args) {
+  if (isFunction(fn)) {
+    const res = callWithErrorHandling(fn, instance, type, args);
+    if (res && isPromise(res)) {
+      res.catch((err) => {
+        handleError(err, instance, type);
+      });
+    }
+    return res;
+  }
+  const values = [];
+  for (let i = 0; i < fn.length; i++) {
+    values.push(callWithAsyncErrorHandling(fn[i], instance, type, args));
+  }
+  return values;
+}
+function handleError(err, instance, type, throwInDev = true) {
+  const contextVNode = instance ? instance.vnode : null;
+  if (instance) {
+    let cur = instance.parent;
+    const exposedInstance = instance.proxy;
+    const errorInfo = type;
+    while (cur) {
+      const errorCapturedHooks = cur.ec;
+      if (errorCapturedHooks) {
+        for (let i = 0; i < errorCapturedHooks.length; i++) {
+          if (errorCapturedHooks[i](err, exposedInstance, errorInfo) === false) {
+            return;
+          }
+        }
+      }
+      cur = cur.parent;
+    }
+    const appErrorHandler = instance.appContext.config.errorHandler;
+    if (appErrorHandler) {
+      callWithErrorHandling(appErrorHandler, null, 10, [err, exposedInstance, errorInfo]);
+      return;
+    }
+  }
+  logError(err, type, contextVNode, throwInDev);
+}
+function logError(err, type, contextVNode, throwInDev = true) {
+  {
+    console.error(err);
+  }
+}
+let isFlushing = false;
+let isFlushPending = false;
+const queue = [];
+let flushIndex = 0;
+const pendingPreFlushCbs = [];
+let activePreFlushCbs = null;
+let preFlushIndex = 0;
+const pendingPostFlushCbs = [];
+let activePostFlushCbs = null;
+let postFlushIndex = 0;
+const resolvedPromise = Promise.resolve();
+let currentFlushPromise = null;
+let currentPreFlushParentJob = null;
+function nextTick(fn) {
+  const p = currentFlushPromise || resolvedPromise;
+  return fn ? p.then(this ? fn.bind(this) : fn) : p;
+}
+function findInsertionIndex(id) {
+  let start = flushIndex + 1;
+  let end = queue.length;
+  while (start < end) {
+    const middle = start + end >>> 1;
+    const middleJobId = getId(queue[middle]);
+    middleJobId < id ? start = middle + 1 : end = middle;
+  }
+  return start;
+}
+function queueJob(job) {
+  if ((!queue.length || !queue.includes(job, isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex)) && job !== currentPreFlushParentJob) {
+    if (job.id == null) {
+      queue.push(job);
+    } else {
+      queue.splice(findInsertionIndex(job.id), 0, job);
+    }
+    queueFlush();
+  }
+}
+function queueFlush() {
+  if (!isFlushing && !isFlushPending) {
+    isFlushPending = true;
+    currentFlushPromise = resolvedPromise.then(flushJobs);
+  }
+}
+function queueCb(cb, activeQueue, pendingQueue, index) {
+  if (!isArray(cb)) {
+    if (!activeQueue || !activeQueue.includes(cb, cb.allowRecurse ? index + 1 : index)) {
+      pendingQueue.push(cb);
+    }
+  } else {
+    pendingQueue.push(...cb);
+  }
+  queueFlush();
+}
+function queuePreFlushCb(cb) {
+  queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex);
+}
+function queuePostFlushCb(cb) {
+  queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex);
+}
+function flushPreFlushCbs(seen, parentJob = null) {
+  if (pendingPreFlushCbs.length) {
+    currentPreFlushParentJob = parentJob;
+    activePreFlushCbs = [...new Set(pendingPreFlushCbs)];
+    pendingPreFlushCbs.length = 0;
+    for (preFlushIndex = 0; preFlushIndex < activePreFlushCbs.length; preFlushIndex++) {
+      activePreFlushCbs[preFlushIndex]();
+    }
+    activePreFlushCbs = null;
+    preFlushIndex = 0;
+    currentPreFlushParentJob = null;
+    flushPreFlushCbs(seen, parentJob);
+  }
+}
+function flushPostFlushCbs(seen) {
+  if (pendingPostFlushCbs.length) {
+    const deduped = [...new Set(pendingPostFlushCbs)];
+    pendingPostFlushCbs.length = 0;
+    if (activePostFlushCbs) {
+      activePostFlushCbs.push(...deduped);
+      return;
+    }
+    activePostFlushCbs = deduped;
+    activePostFlushCbs.sort((a, b) => getId(a) - getId(b));
+    for (postFlushIndex = 0; postFlushIndex < activePostFlushCbs.length; postFlushIndex++) {
+      activePostFlushCbs[postFlushIndex]();
+    }
+    activePostFlushCbs = null;
+    postFlushIndex = 0;
+  }
+}
+const getId = (job) => job.id == null ? Infinity : job.id;
+function flushJobs(seen) {
+  isFlushPending = false;
+  isFlushing = true;
+  flushPreFlushCbs(seen);
+  queue.sort((a, b) => getId(a) - getId(b));
+  const check = NOOP;
+  try {
+    for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
+      const job = queue[flushIndex];
+      if (job && job.active !== false) {
+        if (false)
+          ;
+        callWithErrorHandling(job, null, 14);
+      }
+    }
+  } finally {
+    flushIndex = 0;
+    queue.length = 0;
+    flushPostFlushCbs();
+    isFlushing = false;
+    currentFlushPromise = null;
+    if (queue.length || pendingPreFlushCbs.length || pendingPostFlushCbs.length) {
+      flushJobs(seen);
+    }
+  }
+}
+const INITIAL_WATCHER_VALUE = {};
+function doWatch(source, cb, { immediate, deep, flush, onTrack, onTrigger } = EMPTY_OBJ) {
+  const instance = currentInstance;
+  let getter;
+  let forceTrigger = false;
+  let isMultiSource = false;
+  if (isRef(source)) {
+    getter = () => source.value;
+    forceTrigger = !!source._shallow;
+  } else if (isReactive(source)) {
+    getter = () => source;
+    deep = true;
+  } else if (isArray(source)) {
+    isMultiSource = true;
+    forceTrigger = source.some(isReactive);
+    getter = () => source.map((s) => {
+      if (isRef(s)) {
+        return s.value;
+      } else if (isReactive(s)) {
+        return traverse(s);
+      } else if (isFunction(s)) {
+        return callWithErrorHandling(s, instance, 2);
+      } else
+        ;
+    });
+  } else if (isFunction(source)) {
+    if (cb) {
+      getter = () => callWithErrorHandling(source, instance, 2);
+    } else {
+      getter = () => {
+        if (instance && instance.isUnmounted) {
+          return;
+        }
+        if (cleanup) {
+          cleanup();
+        }
+        return callWithAsyncErrorHandling(source, instance, 3, [onInvalidate]);
+      };
+    }
+  } else {
+    getter = NOOP;
+  }
+  if (cb && deep) {
+    const baseGetter = getter;
+    getter = () => traverse(baseGetter());
+  }
+  let cleanup;
+  let onInvalidate = (fn) => {
+    cleanup = effect.onStop = () => {
+      callWithErrorHandling(fn, instance, 4);
+    };
+  };
+  let oldValue = isMultiSource ? [] : INITIAL_WATCHER_VALUE;
+  const job = () => {
+    if (!effect.active) {
+      return;
+    }
+    if (cb) {
+      const newValue = effect.run();
+      if (deep || forceTrigger || (isMultiSource ? newValue.some((v, i) => hasChanged(v, oldValue[i])) : hasChanged(newValue, oldValue)) || false) {
+        if (cleanup) {
+          cleanup();
+        }
+        callWithAsyncErrorHandling(cb, instance, 3, [
+          newValue,
+          oldValue === INITIAL_WATCHER_VALUE ? void 0 : oldValue,
+          onInvalidate
+        ]);
+        oldValue = newValue;
+      }
+    } else {
+      effect.run();
+    }
+  };
+  job.allowRecurse = !!cb;
+  let scheduler;
+  if (flush === "sync") {
+    scheduler = job;
+  } else if (flush === "post") {
+    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense);
+  } else {
+    scheduler = () => {
+      if (!instance || instance.isMounted) {
+        queuePreFlushCb(job);
+      } else {
+        job();
+      }
+    };
+  }
+  const effect = new ReactiveEffect(getter, scheduler);
+  if (cb) {
+    if (immediate) {
+      job();
+    } else {
+      oldValue = effect.run();
+    }
+  } else if (flush === "post") {
+    queuePostRenderEffect(effect.run.bind(effect), instance && instance.suspense);
+  } else {
+    effect.run();
+  }
+  return () => {
+    effect.stop();
+    if (instance && instance.scope) {
+      remove(instance.scope.effects, effect);
+    }
+  };
+}
+function instanceWatch(source, value, options) {
+  const publicThis = this.proxy;
+  const getter = isString(source) ? source.includes(".") ? createPathGetter(publicThis, source) : () => publicThis[source] : source.bind(publicThis, publicThis);
+  let cb;
+  if (isFunction(value)) {
+    cb = value;
+  } else {
+    cb = value.handler;
+    options = value;
+  }
+  const cur = currentInstance;
+  setCurrentInstance(this);
+  const res = doWatch(getter, cb.bind(publicThis), options);
+  if (cur) {
+    setCurrentInstance(cur);
+  } else {
+    unsetCurrentInstance();
+  }
+  return res;
+}
+function createPathGetter(ctx, path) {
+  const segments = path.split(".");
+  return () => {
+    let cur = ctx;
+    for (let i = 0; i < segments.length && cur; i++) {
+      cur = cur[segments[i]];
+    }
+    return cur;
+  };
+}
+function traverse(value, seen) {
+  if (!isObject(value) || value["__v_skip"]) {
+    return value;
+  }
+  seen = seen || new Set();
+  if (seen.has(value)) {
+    return value;
+  }
+  seen.add(value);
+  if (isRef(value)) {
+    traverse(value.value, seen);
+  } else if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      traverse(value[i], seen);
+    }
+  } else if (isSet(value) || isMap(value)) {
+    value.forEach((v) => {
+      traverse(v, seen);
+    });
+  } else if (isPlainObject(value)) {
+    for (const key in value) {
+      traverse(value[key], seen);
+    }
+  }
+  return value;
+}
 var _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
   for (const [key, val] of props) {
@@ -25,1730 +1006,36 @@ var _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const _sfc_main$7 = {};
+const _sfc_main$1 = {};
 function _sfc_render(_ctx, _cache) {
   return openBlock(), createElementBlock("div", null, toDisplayString(this.$route), 1);
 }
-var RouteView = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render]]);
-const _hoisted_1$6 = { class: "tile is-child notification is-warning" };
-const _hoisted_2$5 = { class: "card-header-title" };
-const _sfc_main$6 = {
-  props: {
-    card: Object,
-    id: Number
-  },
-  setup(__props) {
-    return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$6, [
-        createElementVNode("h3", _hoisted_2$5, toDisplayString(__props.card.title), 1)
-      ]);
-    };
-  }
-};
-/*!
-  * vue-router v4.0.12
-  * (c) 2021 Eduardo San Martin Morote
-  * @license MIT
-  */
-const hasSymbol = typeof Symbol === "function" && typeof Symbol.toStringTag === "symbol";
-const PolySymbol = (name) => hasSymbol ? Symbol(name) : "_vr_" + name;
-const matchedRouteKey = /* @__PURE__ */ PolySymbol("rvlm");
-const viewDepthKey = /* @__PURE__ */ PolySymbol("rvd");
-const routerKey = /* @__PURE__ */ PolySymbol("r");
-const routeLocationKey = /* @__PURE__ */ PolySymbol("rl");
-const routerViewLocationKey = /* @__PURE__ */ PolySymbol("rvl");
-const isBrowser = typeof window !== "undefined";
-function isESModule(obj) {
-  return obj.__esModule || hasSymbol && obj[Symbol.toStringTag] === "Module";
-}
-const assign = Object.assign;
-function applyToParams(fn, params) {
-  const newParams = {};
-  for (const key in params) {
-    const value = params[key];
-    newParams[key] = Array.isArray(value) ? value.map(fn) : fn(value);
-  }
-  return newParams;
-}
-const noop = () => {
-};
-const TRAILING_SLASH_RE = /\/$/;
-const removeTrailingSlash = (path) => path.replace(TRAILING_SLASH_RE, "");
-function parseURL(parseQuery2, location2, currentLocation = "/") {
-  let path, query = {}, searchString = "", hash = "";
-  const searchPos = location2.indexOf("?");
-  const hashPos = location2.indexOf("#", searchPos > -1 ? searchPos : 0);
-  if (searchPos > -1) {
-    path = location2.slice(0, searchPos);
-    searchString = location2.slice(searchPos + 1, hashPos > -1 ? hashPos : location2.length);
-    query = parseQuery2(searchString);
-  }
-  if (hashPos > -1) {
-    path = path || location2.slice(0, hashPos);
-    hash = location2.slice(hashPos, location2.length);
-  }
-  path = resolveRelativePath(path != null ? path : location2, currentLocation);
-  return {
-    fullPath: path + (searchString && "?") + searchString + hash,
-    path,
-    query,
-    hash
-  };
-}
-function stringifyURL(stringifyQuery2, location2) {
-  const query = location2.query ? stringifyQuery2(location2.query) : "";
-  return location2.path + (query && "?") + query + (location2.hash || "");
-}
-function stripBase(pathname, base) {
-  if (!base || !pathname.toLowerCase().startsWith(base.toLowerCase()))
-    return pathname;
-  return pathname.slice(base.length) || "/";
-}
-function isSameRouteLocation(stringifyQuery2, a, b) {
-  const aLastIndex = a.matched.length - 1;
-  const bLastIndex = b.matched.length - 1;
-  return aLastIndex > -1 && aLastIndex === bLastIndex && isSameRouteRecord(a.matched[aLastIndex], b.matched[bLastIndex]) && isSameRouteLocationParams(a.params, b.params) && stringifyQuery2(a.query) === stringifyQuery2(b.query) && a.hash === b.hash;
-}
-function isSameRouteRecord(a, b) {
-  return (a.aliasOf || a) === (b.aliasOf || b);
-}
-function isSameRouteLocationParams(a, b) {
-  if (Object.keys(a).length !== Object.keys(b).length)
-    return false;
-  for (const key in a) {
-    if (!isSameRouteLocationParamsValue(a[key], b[key]))
-      return false;
-  }
-  return true;
-}
-function isSameRouteLocationParamsValue(a, b) {
-  return Array.isArray(a) ? isEquivalentArray(a, b) : Array.isArray(b) ? isEquivalentArray(b, a) : a === b;
-}
-function isEquivalentArray(a, b) {
-  return Array.isArray(b) ? a.length === b.length && a.every((value, i) => value === b[i]) : a.length === 1 && a[0] === b;
-}
-function resolveRelativePath(to, from) {
-  if (to.startsWith("/"))
-    return to;
-  if (!to)
-    return from;
-  const fromSegments = from.split("/");
-  const toSegments = to.split("/");
-  let position = fromSegments.length - 1;
-  let toPosition;
-  let segment;
-  for (toPosition = 0; toPosition < toSegments.length; toPosition++) {
-    segment = toSegments[toPosition];
-    if (position === 1 || segment === ".")
-      continue;
-    if (segment === "..")
-      position--;
-    else
-      break;
-  }
-  return fromSegments.slice(0, position).join("/") + "/" + toSegments.slice(toPosition - (toPosition === toSegments.length ? 1 : 0)).join("/");
-}
-var NavigationType;
-(function(NavigationType2) {
-  NavigationType2["pop"] = "pop";
-  NavigationType2["push"] = "push";
-})(NavigationType || (NavigationType = {}));
-var NavigationDirection;
-(function(NavigationDirection2) {
-  NavigationDirection2["back"] = "back";
-  NavigationDirection2["forward"] = "forward";
-  NavigationDirection2["unknown"] = "";
-})(NavigationDirection || (NavigationDirection = {}));
-function normalizeBase(base) {
-  if (!base) {
-    if (isBrowser) {
-      const baseEl = document.querySelector("base");
-      base = baseEl && baseEl.getAttribute("href") || "/";
-      base = base.replace(/^\w+:\/\/[^\/]+/, "");
-    } else {
-      base = "/";
-    }
-  }
-  if (base[0] !== "/" && base[0] !== "#")
-    base = "/" + base;
-  return removeTrailingSlash(base);
-}
-const BEFORE_HASH_RE = /^[^#]+#/;
-function createHref(base, location2) {
-  return base.replace(BEFORE_HASH_RE, "#") + location2;
-}
-function getElementPosition(el, offset) {
-  const docRect = document.documentElement.getBoundingClientRect();
-  const elRect = el.getBoundingClientRect();
-  return {
-    behavior: offset.behavior,
-    left: elRect.left - docRect.left - (offset.left || 0),
-    top: elRect.top - docRect.top - (offset.top || 0)
-  };
-}
-const computeScrollPosition = () => ({
-  left: window.pageXOffset,
-  top: window.pageYOffset
-});
-function scrollToPosition(position) {
-  let scrollToOptions;
-  if ("el" in position) {
-    const positionEl = position.el;
-    const isIdSelector = typeof positionEl === "string" && positionEl.startsWith("#");
-    const el = typeof positionEl === "string" ? isIdSelector ? document.getElementById(positionEl.slice(1)) : document.querySelector(positionEl) : positionEl;
-    if (!el) {
-      return;
-    }
-    scrollToOptions = getElementPosition(el, position);
-  } else {
-    scrollToOptions = position;
-  }
-  if ("scrollBehavior" in document.documentElement.style)
-    window.scrollTo(scrollToOptions);
-  else {
-    window.scrollTo(scrollToOptions.left != null ? scrollToOptions.left : window.pageXOffset, scrollToOptions.top != null ? scrollToOptions.top : window.pageYOffset);
-  }
-}
-function getScrollKey(path, delta) {
-  const position = history.state ? history.state.position - delta : -1;
-  return position + path;
-}
-const scrollPositions = new Map();
-function saveScrollPosition(key, scrollPosition) {
-  scrollPositions.set(key, scrollPosition);
-}
-function getSavedScrollPosition(key) {
-  const scroll = scrollPositions.get(key);
-  scrollPositions.delete(key);
-  return scroll;
-}
-let createBaseLocation = () => location.protocol + "//" + location.host;
-function createCurrentLocation(base, location2) {
-  const { pathname, search, hash } = location2;
-  const hashPos = base.indexOf("#");
-  if (hashPos > -1) {
-    let slicePos = hash.includes(base.slice(hashPos)) ? base.slice(hashPos).length : 1;
-    let pathFromHash = hash.slice(slicePos);
-    if (pathFromHash[0] !== "/")
-      pathFromHash = "/" + pathFromHash;
-    return stripBase(pathFromHash, "");
-  }
-  const path = stripBase(pathname, base);
-  return path + search + hash;
-}
-function useHistoryListeners(base, historyState, currentLocation, replace) {
-  let listeners = [];
-  let teardowns = [];
-  let pauseState = null;
-  const popStateHandler = ({ state }) => {
-    const to = createCurrentLocation(base, location);
-    const from = currentLocation.value;
-    const fromState = historyState.value;
-    let delta = 0;
-    if (state) {
-      currentLocation.value = to;
-      historyState.value = state;
-      if (pauseState && pauseState === from) {
-        pauseState = null;
-        return;
-      }
-      delta = fromState ? state.position - fromState.position : 0;
-    } else {
-      replace(to);
-    }
-    listeners.forEach((listener) => {
-      listener(currentLocation.value, from, {
-        delta,
-        type: NavigationType.pop,
-        direction: delta ? delta > 0 ? NavigationDirection.forward : NavigationDirection.back : NavigationDirection.unknown
-      });
-    });
-  };
-  function pauseListeners() {
-    pauseState = currentLocation.value;
-  }
-  function listen(callback) {
-    listeners.push(callback);
-    const teardown = () => {
-      const index = listeners.indexOf(callback);
-      if (index > -1)
-        listeners.splice(index, 1);
-    };
-    teardowns.push(teardown);
-    return teardown;
-  }
-  function beforeUnloadListener() {
-    const { history: history2 } = window;
-    if (!history2.state)
-      return;
-    history2.replaceState(assign({}, history2.state, { scroll: computeScrollPosition() }), "");
-  }
-  function destroy() {
-    for (const teardown of teardowns)
-      teardown();
-    teardowns = [];
-    window.removeEventListener("popstate", popStateHandler);
-    window.removeEventListener("beforeunload", beforeUnloadListener);
-  }
-  window.addEventListener("popstate", popStateHandler);
-  window.addEventListener("beforeunload", beforeUnloadListener);
-  return {
-    pauseListeners,
-    listen,
-    destroy
-  };
-}
-function buildState(back, current, forward, replaced = false, computeScroll = false) {
-  return {
-    back,
-    current,
-    forward,
-    replaced,
-    position: window.history.length,
-    scroll: computeScroll ? computeScrollPosition() : null
-  };
-}
-function useHistoryStateNavigation(base) {
-  const { history: history2, location: location2 } = window;
-  const currentLocation = {
-    value: createCurrentLocation(base, location2)
-  };
-  const historyState = { value: history2.state };
-  if (!historyState.value) {
-    changeLocation(currentLocation.value, {
-      back: null,
-      current: currentLocation.value,
-      forward: null,
-      position: history2.length - 1,
-      replaced: true,
-      scroll: null
-    }, true);
-  }
-  function changeLocation(to, state, replace2) {
-    const hashIndex = base.indexOf("#");
-    const url = hashIndex > -1 ? (location2.host && document.querySelector("base") ? base : base.slice(hashIndex)) + to : createBaseLocation() + base + to;
-    try {
-      history2[replace2 ? "replaceState" : "pushState"](state, "", url);
-      historyState.value = state;
-    } catch (err) {
-      {
-        console.error(err);
-      }
-      location2[replace2 ? "replace" : "assign"](url);
-    }
-  }
-  function replace(to, data) {
-    const state = assign({}, history2.state, buildState(historyState.value.back, to, historyState.value.forward, true), data, { position: historyState.value.position });
-    changeLocation(to, state, true);
-    currentLocation.value = to;
-  }
-  function push(to, data) {
-    const currentState = assign({}, historyState.value, history2.state, {
-      forward: to,
-      scroll: computeScrollPosition()
-    });
-    changeLocation(currentState.current, currentState, true);
-    const state = assign({}, buildState(currentLocation.value, to, null), { position: currentState.position + 1 }, data);
-    changeLocation(to, state, false);
-    currentLocation.value = to;
-  }
-  return {
-    location: currentLocation,
-    state: historyState,
-    push,
-    replace
-  };
-}
-function createWebHistory(base) {
-  base = normalizeBase(base);
-  const historyNavigation = useHistoryStateNavigation(base);
-  const historyListeners = useHistoryListeners(base, historyNavigation.state, historyNavigation.location, historyNavigation.replace);
-  function go(delta, triggerListeners = true) {
-    if (!triggerListeners)
-      historyListeners.pauseListeners();
-    history.go(delta);
-  }
-  const routerHistory = assign({
-    location: "",
-    base,
-    go,
-    createHref: createHref.bind(null, base)
-  }, historyNavigation, historyListeners);
-  Object.defineProperty(routerHistory, "location", {
-    enumerable: true,
-    get: () => historyNavigation.location.value
-  });
-  Object.defineProperty(routerHistory, "state", {
-    enumerable: true,
-    get: () => historyNavigation.state.value
-  });
-  return routerHistory;
-}
-function isRouteLocation(route) {
-  return typeof route === "string" || route && typeof route === "object";
-}
-function isRouteName(name) {
-  return typeof name === "string" || typeof name === "symbol";
-}
-const START_LOCATION_NORMALIZED = {
-  path: "/",
-  name: void 0,
-  params: {},
-  query: {},
-  hash: "",
-  fullPath: "/",
-  matched: [],
-  meta: {},
-  redirectedFrom: void 0
-};
-const NavigationFailureSymbol = /* @__PURE__ */ PolySymbol("nf");
-var NavigationFailureType;
-(function(NavigationFailureType2) {
-  NavigationFailureType2[NavigationFailureType2["aborted"] = 4] = "aborted";
-  NavigationFailureType2[NavigationFailureType2["cancelled"] = 8] = "cancelled";
-  NavigationFailureType2[NavigationFailureType2["duplicated"] = 16] = "duplicated";
-})(NavigationFailureType || (NavigationFailureType = {}));
-function createRouterError(type, params) {
-  {
-    return assign(new Error(), {
-      type,
-      [NavigationFailureSymbol]: true
-    }, params);
-  }
-}
-function isNavigationFailure(error, type) {
-  return error instanceof Error && NavigationFailureSymbol in error && (type == null || !!(error.type & type));
-}
-const BASE_PARAM_PATTERN = "[^/]+?";
-const BASE_PATH_PARSER_OPTIONS = {
-  sensitive: false,
-  strict: false,
-  start: true,
-  end: true
-};
-const REGEX_CHARS_RE = /[.+*?^${}()[\]/\\]/g;
-function tokensToParser(segments, extraOptions) {
-  const options = assign({}, BASE_PATH_PARSER_OPTIONS, extraOptions);
-  const score = [];
-  let pattern = options.start ? "^" : "";
-  const keys = [];
-  for (const segment of segments) {
-    const segmentScores = segment.length ? [] : [90];
-    if (options.strict && !segment.length)
-      pattern += "/";
-    for (let tokenIndex = 0; tokenIndex < segment.length; tokenIndex++) {
-      const token = segment[tokenIndex];
-      let subSegmentScore = 40 + (options.sensitive ? 0.25 : 0);
-      if (token.type === 0) {
-        if (!tokenIndex)
-          pattern += "/";
-        pattern += token.value.replace(REGEX_CHARS_RE, "\\$&");
-        subSegmentScore += 40;
-      } else if (token.type === 1) {
-        const { value, repeatable, optional, regexp } = token;
-        keys.push({
-          name: value,
-          repeatable,
-          optional
-        });
-        const re2 = regexp ? regexp : BASE_PARAM_PATTERN;
-        if (re2 !== BASE_PARAM_PATTERN) {
-          subSegmentScore += 10;
-          try {
-            new RegExp(`(${re2})`);
-          } catch (err) {
-            throw new Error(`Invalid custom RegExp for param "${value}" (${re2}): ` + err.message);
-          }
-        }
-        let subPattern = repeatable ? `((?:${re2})(?:/(?:${re2}))*)` : `(${re2})`;
-        if (!tokenIndex)
-          subPattern = optional && segment.length < 2 ? `(?:/${subPattern})` : "/" + subPattern;
-        if (optional)
-          subPattern += "?";
-        pattern += subPattern;
-        subSegmentScore += 20;
-        if (optional)
-          subSegmentScore += -8;
-        if (repeatable)
-          subSegmentScore += -20;
-        if (re2 === ".*")
-          subSegmentScore += -50;
-      }
-      segmentScores.push(subSegmentScore);
-    }
-    score.push(segmentScores);
-  }
-  if (options.strict && options.end) {
-    const i = score.length - 1;
-    score[i][score[i].length - 1] += 0.7000000000000001;
-  }
-  if (!options.strict)
-    pattern += "/?";
-  if (options.end)
-    pattern += "$";
-  else if (options.strict)
-    pattern += "(?:/|$)";
-  const re = new RegExp(pattern, options.sensitive ? "" : "i");
-  function parse(path) {
-    const match = path.match(re);
-    const params = {};
-    if (!match)
-      return null;
-    for (let i = 1; i < match.length; i++) {
-      const value = match[i] || "";
-      const key = keys[i - 1];
-      params[key.name] = value && key.repeatable ? value.split("/") : value;
-    }
-    return params;
-  }
-  function stringify(params) {
-    let path = "";
-    let avoidDuplicatedSlash = false;
-    for (const segment of segments) {
-      if (!avoidDuplicatedSlash || !path.endsWith("/"))
-        path += "/";
-      avoidDuplicatedSlash = false;
-      for (const token of segment) {
-        if (token.type === 0) {
-          path += token.value;
-        } else if (token.type === 1) {
-          const { value, repeatable, optional } = token;
-          const param = value in params ? params[value] : "";
-          if (Array.isArray(param) && !repeatable)
-            throw new Error(`Provided param "${value}" is an array but it is not repeatable (* or + modifiers)`);
-          const text = Array.isArray(param) ? param.join("/") : param;
-          if (!text) {
-            if (optional) {
-              if (segment.length < 2) {
-                if (path.endsWith("/"))
-                  path = path.slice(0, -1);
-                else
-                  avoidDuplicatedSlash = true;
-              }
-            } else
-              throw new Error(`Missing required param "${value}"`);
-          }
-          path += text;
-        }
-      }
-    }
-    return path;
-  }
-  return {
-    re,
-    score,
-    keys,
-    parse,
-    stringify
-  };
-}
-function compareScoreArray(a, b) {
-  let i = 0;
-  while (i < a.length && i < b.length) {
-    const diff = b[i] - a[i];
-    if (diff)
-      return diff;
-    i++;
-  }
-  if (a.length < b.length) {
-    return a.length === 1 && a[0] === 40 + 40 ? -1 : 1;
-  } else if (a.length > b.length) {
-    return b.length === 1 && b[0] === 40 + 40 ? 1 : -1;
-  }
-  return 0;
-}
-function comparePathParserScore(a, b) {
-  let i = 0;
-  const aScore = a.score;
-  const bScore = b.score;
-  while (i < aScore.length && i < bScore.length) {
-    const comp = compareScoreArray(aScore[i], bScore[i]);
-    if (comp)
-      return comp;
-    i++;
-  }
-  return bScore.length - aScore.length;
-}
-const ROOT_TOKEN = {
-  type: 0,
-  value: ""
-};
-const VALID_PARAM_RE = /[a-zA-Z0-9_]/;
-function tokenizePath(path) {
-  if (!path)
-    return [[]];
-  if (path === "/")
-    return [[ROOT_TOKEN]];
-  if (!path.startsWith("/")) {
-    throw new Error(`Invalid path "${path}"`);
-  }
-  function crash(message) {
-    throw new Error(`ERR (${state})/"${buffer}": ${message}`);
-  }
-  let state = 0;
-  let previousState = state;
-  const tokens = [];
-  let segment;
-  function finalizeSegment() {
-    if (segment)
-      tokens.push(segment);
-    segment = [];
-  }
-  let i = 0;
-  let char;
-  let buffer = "";
-  let customRe = "";
-  function consumeBuffer() {
-    if (!buffer)
-      return;
-    if (state === 0) {
-      segment.push({
-        type: 0,
-        value: buffer
-      });
-    } else if (state === 1 || state === 2 || state === 3) {
-      if (segment.length > 1 && (char === "*" || char === "+"))
-        crash(`A repeatable param (${buffer}) must be alone in its segment. eg: '/:ids+.`);
-      segment.push({
-        type: 1,
-        value: buffer,
-        regexp: customRe,
-        repeatable: char === "*" || char === "+",
-        optional: char === "*" || char === "?"
-      });
-    } else {
-      crash("Invalid state to consume buffer");
-    }
-    buffer = "";
-  }
-  function addCharToBuffer() {
-    buffer += char;
-  }
-  while (i < path.length) {
-    char = path[i++];
-    if (char === "\\" && state !== 2) {
-      previousState = state;
-      state = 4;
-      continue;
-    }
-    switch (state) {
-      case 0:
-        if (char === "/") {
-          if (buffer) {
-            consumeBuffer();
-          }
-          finalizeSegment();
-        } else if (char === ":") {
-          consumeBuffer();
-          state = 1;
-        } else {
-          addCharToBuffer();
-        }
-        break;
-      case 4:
-        addCharToBuffer();
-        state = previousState;
-        break;
-      case 1:
-        if (char === "(") {
-          state = 2;
-        } else if (VALID_PARAM_RE.test(char)) {
-          addCharToBuffer();
-        } else {
-          consumeBuffer();
-          state = 0;
-          if (char !== "*" && char !== "?" && char !== "+")
-            i--;
-        }
-        break;
-      case 2:
-        if (char === ")") {
-          if (customRe[customRe.length - 1] == "\\")
-            customRe = customRe.slice(0, -1) + char;
-          else
-            state = 3;
-        } else {
-          customRe += char;
-        }
-        break;
-      case 3:
-        consumeBuffer();
-        state = 0;
-        if (char !== "*" && char !== "?" && char !== "+")
-          i--;
-        customRe = "";
-        break;
-      default:
-        crash("Unknown state");
-        break;
-    }
-  }
-  if (state === 2)
-    crash(`Unfinished custom RegExp for param "${buffer}"`);
-  consumeBuffer();
-  finalizeSegment();
-  return tokens;
-}
-function createRouteRecordMatcher(record, parent, options) {
-  const parser = tokensToParser(tokenizePath(record.path), options);
-  const matcher = assign(parser, {
-    record,
-    parent,
-    children: [],
-    alias: []
-  });
-  if (parent) {
-    if (!matcher.record.aliasOf === !parent.record.aliasOf)
-      parent.children.push(matcher);
-  }
-  return matcher;
-}
-function createRouterMatcher(routes2, globalOptions) {
-  const matchers = [];
-  const matcherMap = new Map();
-  globalOptions = mergeOptions({ strict: false, end: true, sensitive: false }, globalOptions);
-  function getRecordMatcher(name) {
-    return matcherMap.get(name);
-  }
-  function addRoute(record, parent, originalRecord) {
-    const isRootAdd = !originalRecord;
-    const mainNormalizedRecord = normalizeRouteRecord(record);
-    mainNormalizedRecord.aliasOf = originalRecord && originalRecord.record;
-    const options = mergeOptions(globalOptions, record);
-    const normalizedRecords = [
-      mainNormalizedRecord
-    ];
-    if ("alias" in record) {
-      const aliases = typeof record.alias === "string" ? [record.alias] : record.alias;
-      for (const alias of aliases) {
-        normalizedRecords.push(assign({}, mainNormalizedRecord, {
-          components: originalRecord ? originalRecord.record.components : mainNormalizedRecord.components,
-          path: alias,
-          aliasOf: originalRecord ? originalRecord.record : mainNormalizedRecord
-        }));
-      }
-    }
-    let matcher;
-    let originalMatcher;
-    for (const normalizedRecord of normalizedRecords) {
-      const { path } = normalizedRecord;
-      if (parent && path[0] !== "/") {
-        const parentPath = parent.record.path;
-        const connectingSlash = parentPath[parentPath.length - 1] === "/" ? "" : "/";
-        normalizedRecord.path = parent.record.path + (path && connectingSlash + path);
-      }
-      matcher = createRouteRecordMatcher(normalizedRecord, parent, options);
-      if (originalRecord) {
-        originalRecord.alias.push(matcher);
-      } else {
-        originalMatcher = originalMatcher || matcher;
-        if (originalMatcher !== matcher)
-          originalMatcher.alias.push(matcher);
-        if (isRootAdd && record.name && !isAliasRecord(matcher))
-          removeRoute(record.name);
-      }
-      if ("children" in mainNormalizedRecord) {
-        const children = mainNormalizedRecord.children;
-        for (let i = 0; i < children.length; i++) {
-          addRoute(children[i], matcher, originalRecord && originalRecord.children[i]);
-        }
-      }
-      originalRecord = originalRecord || matcher;
-      insertMatcher(matcher);
-    }
-    return originalMatcher ? () => {
-      removeRoute(originalMatcher);
-    } : noop;
-  }
-  function removeRoute(matcherRef) {
-    if (isRouteName(matcherRef)) {
-      const matcher = matcherMap.get(matcherRef);
-      if (matcher) {
-        matcherMap.delete(matcherRef);
-        matchers.splice(matchers.indexOf(matcher), 1);
-        matcher.children.forEach(removeRoute);
-        matcher.alias.forEach(removeRoute);
-      }
-    } else {
-      const index = matchers.indexOf(matcherRef);
-      if (index > -1) {
-        matchers.splice(index, 1);
-        if (matcherRef.record.name)
-          matcherMap.delete(matcherRef.record.name);
-        matcherRef.children.forEach(removeRoute);
-        matcherRef.alias.forEach(removeRoute);
-      }
-    }
-  }
-  function getRoutes() {
-    return matchers;
-  }
-  function insertMatcher(matcher) {
-    let i = 0;
-    while (i < matchers.length && comparePathParserScore(matcher, matchers[i]) >= 0)
-      i++;
-    matchers.splice(i, 0, matcher);
-    if (matcher.record.name && !isAliasRecord(matcher))
-      matcherMap.set(matcher.record.name, matcher);
-  }
-  function resolve(location2, currentLocation) {
-    let matcher;
-    let params = {};
-    let path;
-    let name;
-    if ("name" in location2 && location2.name) {
-      matcher = matcherMap.get(location2.name);
-      if (!matcher)
-        throw createRouterError(1, {
-          location: location2
-        });
-      name = matcher.record.name;
-      params = assign(paramsFromLocation(currentLocation.params, matcher.keys.filter((k) => !k.optional).map((k) => k.name)), location2.params);
-      path = matcher.stringify(params);
-    } else if ("path" in location2) {
-      path = location2.path;
-      matcher = matchers.find((m) => m.re.test(path));
-      if (matcher) {
-        params = matcher.parse(path);
-        name = matcher.record.name;
-      }
-    } else {
-      matcher = currentLocation.name ? matcherMap.get(currentLocation.name) : matchers.find((m) => m.re.test(currentLocation.path));
-      if (!matcher)
-        throw createRouterError(1, {
-          location: location2,
-          currentLocation
-        });
-      name = matcher.record.name;
-      params = assign({}, currentLocation.params, location2.params);
-      path = matcher.stringify(params);
-    }
-    const matched = [];
-    let parentMatcher = matcher;
-    while (parentMatcher) {
-      matched.unshift(parentMatcher.record);
-      parentMatcher = parentMatcher.parent;
-    }
-    return {
-      name,
-      path,
-      params,
-      matched,
-      meta: mergeMetaFields(matched)
-    };
-  }
-  routes2.forEach((route) => addRoute(route));
-  return { addRoute, resolve, removeRoute, getRoutes, getRecordMatcher };
-}
-function paramsFromLocation(params, keys) {
-  const newParams = {};
-  for (const key of keys) {
-    if (key in params)
-      newParams[key] = params[key];
-  }
-  return newParams;
-}
-function normalizeRouteRecord(record) {
-  return {
-    path: record.path,
-    redirect: record.redirect,
-    name: record.name,
-    meta: record.meta || {},
-    aliasOf: void 0,
-    beforeEnter: record.beforeEnter,
-    props: normalizeRecordProps(record),
-    children: record.children || [],
-    instances: {},
-    leaveGuards: new Set(),
-    updateGuards: new Set(),
-    enterCallbacks: {},
-    components: "components" in record ? record.components || {} : { default: record.component }
-  };
-}
-function normalizeRecordProps(record) {
-  const propsObject = {};
-  const props = record.props || false;
-  if ("component" in record) {
-    propsObject.default = props;
-  } else {
-    for (const name in record.components)
-      propsObject[name] = typeof props === "boolean" ? props : props[name];
-  }
-  return propsObject;
-}
-function isAliasRecord(record) {
-  while (record) {
-    if (record.record.aliasOf)
-      return true;
-    record = record.parent;
-  }
-  return false;
-}
-function mergeMetaFields(matched) {
-  return matched.reduce((meta, record) => assign(meta, record.meta), {});
-}
-function mergeOptions(defaults, partialOptions) {
-  const options = {};
-  for (const key in defaults) {
-    options[key] = key in partialOptions ? partialOptions[key] : defaults[key];
-  }
-  return options;
-}
-const HASH_RE = /#/g;
-const AMPERSAND_RE = /&/g;
-const SLASH_RE = /\//g;
-const EQUAL_RE = /=/g;
-const IM_RE = /\?/g;
-const PLUS_RE = /\+/g;
-const ENC_BRACKET_OPEN_RE = /%5B/g;
-const ENC_BRACKET_CLOSE_RE = /%5D/g;
-const ENC_CARET_RE = /%5E/g;
-const ENC_BACKTICK_RE = /%60/g;
-const ENC_CURLY_OPEN_RE = /%7B/g;
-const ENC_PIPE_RE = /%7C/g;
-const ENC_CURLY_CLOSE_RE = /%7D/g;
-const ENC_SPACE_RE = /%20/g;
-function commonEncode(text) {
-  return encodeURI("" + text).replace(ENC_PIPE_RE, "|").replace(ENC_BRACKET_OPEN_RE, "[").replace(ENC_BRACKET_CLOSE_RE, "]");
-}
-function encodeHash(text) {
-  return commonEncode(text).replace(ENC_CURLY_OPEN_RE, "{").replace(ENC_CURLY_CLOSE_RE, "}").replace(ENC_CARET_RE, "^");
-}
-function encodeQueryValue(text) {
-  return commonEncode(text).replace(PLUS_RE, "%2B").replace(ENC_SPACE_RE, "+").replace(HASH_RE, "%23").replace(AMPERSAND_RE, "%26").replace(ENC_BACKTICK_RE, "`").replace(ENC_CURLY_OPEN_RE, "{").replace(ENC_CURLY_CLOSE_RE, "}").replace(ENC_CARET_RE, "^");
-}
-function encodeQueryKey(text) {
-  return encodeQueryValue(text).replace(EQUAL_RE, "%3D");
-}
-function encodePath(text) {
-  return commonEncode(text).replace(HASH_RE, "%23").replace(IM_RE, "%3F");
-}
-function encodeParam(text) {
-  return text == null ? "" : encodePath(text).replace(SLASH_RE, "%2F");
-}
-function decode(text) {
-  try {
-    return decodeURIComponent("" + text);
-  } catch (err) {
-  }
-  return "" + text;
-}
-function parseQuery(search) {
-  const query = {};
-  if (search === "" || search === "?")
-    return query;
-  const hasLeadingIM = search[0] === "?";
-  const searchParams = (hasLeadingIM ? search.slice(1) : search).split("&");
-  for (let i = 0; i < searchParams.length; ++i) {
-    const searchParam = searchParams[i].replace(PLUS_RE, " ");
-    const eqPos = searchParam.indexOf("=");
-    const key = decode(eqPos < 0 ? searchParam : searchParam.slice(0, eqPos));
-    const value = eqPos < 0 ? null : decode(searchParam.slice(eqPos + 1));
-    if (key in query) {
-      let currentValue = query[key];
-      if (!Array.isArray(currentValue)) {
-        currentValue = query[key] = [currentValue];
-      }
-      currentValue.push(value);
-    } else {
-      query[key] = value;
-    }
-  }
-  return query;
-}
-function stringifyQuery(query) {
-  let search = "";
-  for (let key in query) {
-    const value = query[key];
-    key = encodeQueryKey(key);
-    if (value == null) {
-      if (value !== void 0) {
-        search += (search.length ? "&" : "") + key;
-      }
-      continue;
-    }
-    const values = Array.isArray(value) ? value.map((v) => v && encodeQueryValue(v)) : [value && encodeQueryValue(value)];
-    values.forEach((value2) => {
-      if (value2 !== void 0) {
-        search += (search.length ? "&" : "") + key;
-        if (value2 != null)
-          search += "=" + value2;
-      }
-    });
-  }
-  return search;
-}
-function normalizeQuery(query) {
-  const normalizedQuery = {};
-  for (const key in query) {
-    const value = query[key];
-    if (value !== void 0) {
-      normalizedQuery[key] = Array.isArray(value) ? value.map((v) => v == null ? null : "" + v) : value == null ? value : "" + value;
-    }
-  }
-  return normalizedQuery;
-}
-function useCallbacks() {
-  let handlers = [];
-  function add(handler) {
-    handlers.push(handler);
-    return () => {
-      const i = handlers.indexOf(handler);
-      if (i > -1)
-        handlers.splice(i, 1);
-    };
-  }
-  function reset() {
-    handlers = [];
-  }
-  return {
-    add,
-    list: () => handlers,
-    reset
-  };
-}
-function guardToPromiseFn(guard, to, from, record, name) {
-  const enterCallbackArray = record && (record.enterCallbacks[name] = record.enterCallbacks[name] || []);
-  return () => new Promise((resolve, reject) => {
-    const next = (valid) => {
-      if (valid === false)
-        reject(createRouterError(4, {
-          from,
-          to
-        }));
-      else if (valid instanceof Error) {
-        reject(valid);
-      } else if (isRouteLocation(valid)) {
-        reject(createRouterError(2, {
-          from: to,
-          to: valid
-        }));
-      } else {
-        if (enterCallbackArray && record.enterCallbacks[name] === enterCallbackArray && typeof valid === "function")
-          enterCallbackArray.push(valid);
-        resolve();
-      }
-    };
-    const guardReturn = guard.call(record && record.instances[name], to, from, next);
-    let guardCall = Promise.resolve(guardReturn);
-    if (guard.length < 3)
-      guardCall = guardCall.then(next);
-    guardCall.catch((err) => reject(err));
-  });
-}
-function extractComponentsGuards(matched, guardType, to, from) {
-  const guards = [];
-  for (const record of matched) {
-    for (const name in record.components) {
-      let rawComponent = record.components[name];
-      if (guardType !== "beforeRouteEnter" && !record.instances[name])
-        continue;
-      if (isRouteComponent(rawComponent)) {
-        const options = rawComponent.__vccOpts || rawComponent;
-        const guard = options[guardType];
-        guard && guards.push(guardToPromiseFn(guard, to, from, record, name));
-      } else {
-        let componentPromise = rawComponent();
-        guards.push(() => componentPromise.then((resolved) => {
-          if (!resolved)
-            return Promise.reject(new Error(`Couldn't resolve component "${name}" at "${record.path}"`));
-          const resolvedComponent = isESModule(resolved) ? resolved.default : resolved;
-          record.components[name] = resolvedComponent;
-          const options = resolvedComponent.__vccOpts || resolvedComponent;
-          const guard = options[guardType];
-          return guard && guardToPromiseFn(guard, to, from, record, name)();
-        }));
-      }
-    }
-  }
-  return guards;
-}
-function isRouteComponent(component) {
-  return typeof component === "object" || "displayName" in component || "props" in component || "__vccOpts" in component;
-}
-function useLink(props) {
-  const router2 = inject(routerKey);
-  const currentRoute = inject(routeLocationKey);
-  const route = computed(() => router2.resolve(unref(props.to)));
-  const activeRecordIndex = computed(() => {
-    const { matched } = route.value;
-    const { length } = matched;
-    const routeMatched = matched[length - 1];
-    const currentMatched = currentRoute.matched;
-    if (!routeMatched || !currentMatched.length)
-      return -1;
-    const index = currentMatched.findIndex(isSameRouteRecord.bind(null, routeMatched));
-    if (index > -1)
-      return index;
-    const parentRecordPath = getOriginalPath(matched[length - 2]);
-    return length > 1 && getOriginalPath(routeMatched) === parentRecordPath && currentMatched[currentMatched.length - 1].path !== parentRecordPath ? currentMatched.findIndex(isSameRouteRecord.bind(null, matched[length - 2])) : index;
-  });
-  const isActive = computed(() => activeRecordIndex.value > -1 && includesParams(currentRoute.params, route.value.params));
-  const isExactActive = computed(() => activeRecordIndex.value > -1 && activeRecordIndex.value === currentRoute.matched.length - 1 && isSameRouteLocationParams(currentRoute.params, route.value.params));
-  function navigate(e = {}) {
-    if (guardEvent(e)) {
-      return router2[unref(props.replace) ? "replace" : "push"](unref(props.to)).catch(noop);
-    }
-    return Promise.resolve();
-  }
-  return {
-    route,
-    href: computed(() => route.value.href),
-    isActive,
-    isExactActive,
-    navigate
-  };
-}
-const RouterLinkImpl = /* @__PURE__ */ defineComponent({
-  name: "RouterLink",
-  props: {
-    to: {
-      type: [String, Object],
-      required: true
-    },
-    replace: Boolean,
-    activeClass: String,
-    exactActiveClass: String,
-    custom: Boolean,
-    ariaCurrentValue: {
-      type: String,
-      default: "page"
-    }
-  },
-  useLink,
-  setup(props, { slots }) {
-    const link = reactive(useLink(props));
-    const { options } = inject(routerKey);
-    const elClass = computed(() => ({
-      [getLinkClass(props.activeClass, options.linkActiveClass, "router-link-active")]: link.isActive,
-      [getLinkClass(props.exactActiveClass, options.linkExactActiveClass, "router-link-exact-active")]: link.isExactActive
-    }));
-    return () => {
-      const children = slots.default && slots.default(link);
-      return props.custom ? children : h("a", {
-        "aria-current": link.isExactActive ? props.ariaCurrentValue : null,
-        href: link.href,
-        onClick: link.navigate,
-        class: elClass.value
-      }, children);
-    };
-  }
-});
-const RouterLink = RouterLinkImpl;
-function guardEvent(e) {
-  if (e.metaKey || e.altKey || e.ctrlKey || e.shiftKey)
-    return;
-  if (e.defaultPrevented)
-    return;
-  if (e.button !== void 0 && e.button !== 0)
-    return;
-  if (e.currentTarget && e.currentTarget.getAttribute) {
-    const target = e.currentTarget.getAttribute("target");
-    if (/\b_blank\b/i.test(target))
-      return;
-  }
-  if (e.preventDefault)
-    e.preventDefault();
-  return true;
-}
-function includesParams(outer, inner) {
-  for (const key in inner) {
-    const innerValue = inner[key];
-    const outerValue = outer[key];
-    if (typeof innerValue === "string") {
-      if (innerValue !== outerValue)
-        return false;
-    } else {
-      if (!Array.isArray(outerValue) || outerValue.length !== innerValue.length || innerValue.some((value, i) => value !== outerValue[i]))
-        return false;
-    }
-  }
-  return true;
-}
-function getOriginalPath(record) {
-  return record ? record.aliasOf ? record.aliasOf.path : record.path : "";
-}
-const getLinkClass = (propClass, globalClass, defaultClass) => propClass != null ? propClass : globalClass != null ? globalClass : defaultClass;
-const RouterViewImpl = /* @__PURE__ */ defineComponent({
-  name: "RouterView",
-  inheritAttrs: false,
-  props: {
-    name: {
-      type: String,
-      default: "default"
-    },
-    route: Object
-  },
-  setup(props, { attrs, slots }) {
-    const injectedRoute = inject(routerViewLocationKey);
-    const routeToDisplay = computed(() => props.route || injectedRoute.value);
-    const depth = inject(viewDepthKey, 0);
-    const matchedRouteRef = computed(() => routeToDisplay.value.matched[depth]);
-    provide(viewDepthKey, depth + 1);
-    provide(matchedRouteKey, matchedRouteRef);
-    provide(routerViewLocationKey, routeToDisplay);
-    const viewRef = ref();
-    watch(() => [viewRef.value, matchedRouteRef.value, props.name], ([instance, to, name], [oldInstance, from, oldName]) => {
-      if (to) {
-        to.instances[name] = instance;
-        if (from && from !== to && instance && instance === oldInstance) {
-          if (!to.leaveGuards.size) {
-            to.leaveGuards = from.leaveGuards;
-          }
-          if (!to.updateGuards.size) {
-            to.updateGuards = from.updateGuards;
-          }
-        }
-      }
-      if (instance && to && (!from || !isSameRouteRecord(to, from) || !oldInstance)) {
-        (to.enterCallbacks[name] || []).forEach((callback) => callback(instance));
-      }
-    }, { flush: "post" });
-    return () => {
-      const route = routeToDisplay.value;
-      const matchedRoute = matchedRouteRef.value;
-      const ViewComponent = matchedRoute && matchedRoute.components[props.name];
-      const currentName = props.name;
-      if (!ViewComponent) {
-        return normalizeSlot(slots.default, { Component: ViewComponent, route });
-      }
-      const routePropsOption = matchedRoute.props[props.name];
-      const routeProps = routePropsOption ? routePropsOption === true ? route.params : typeof routePropsOption === "function" ? routePropsOption(route) : routePropsOption : null;
-      const onVnodeUnmounted = (vnode) => {
-        if (vnode.component.isUnmounted) {
-          matchedRoute.instances[currentName] = null;
-        }
-      };
-      const component = h(ViewComponent, assign({}, routeProps, attrs, {
-        onVnodeUnmounted,
-        ref: viewRef
-      }));
-      return normalizeSlot(slots.default, { Component: component, route }) || component;
-    };
-  }
-});
-function normalizeSlot(slot, data) {
-  if (!slot)
-    return null;
-  const slotContent = slot(data);
-  return slotContent.length === 1 ? slotContent[0] : slotContent;
-}
-const RouterView = RouterViewImpl;
-function createRouter(options) {
-  const matcher = createRouterMatcher(options.routes, options);
-  const parseQuery$1 = options.parseQuery || parseQuery;
-  const stringifyQuery$1 = options.stringifyQuery || stringifyQuery;
-  const routerHistory = options.history;
-  const beforeGuards = useCallbacks();
-  const beforeResolveGuards = useCallbacks();
-  const afterGuards = useCallbacks();
-  const currentRoute = shallowRef(START_LOCATION_NORMALIZED);
-  let pendingLocation = START_LOCATION_NORMALIZED;
-  if (isBrowser && options.scrollBehavior && "scrollRestoration" in history) {
-    history.scrollRestoration = "manual";
-  }
-  const normalizeParams = applyToParams.bind(null, (paramValue) => "" + paramValue);
-  const encodeParams = applyToParams.bind(null, encodeParam);
-  const decodeParams = applyToParams.bind(null, decode);
-  function addRoute(parentOrRoute, route) {
-    let parent;
-    let record;
-    if (isRouteName(parentOrRoute)) {
-      parent = matcher.getRecordMatcher(parentOrRoute);
-      record = route;
-    } else {
-      record = parentOrRoute;
-    }
-    return matcher.addRoute(record, parent);
-  }
-  function removeRoute(name) {
-    const recordMatcher = matcher.getRecordMatcher(name);
-    if (recordMatcher) {
-      matcher.removeRoute(recordMatcher);
-    }
-  }
-  function getRoutes() {
-    return matcher.getRoutes().map((routeMatcher) => routeMatcher.record);
-  }
-  function hasRoute(name) {
-    return !!matcher.getRecordMatcher(name);
-  }
-  function resolve(rawLocation, currentLocation) {
-    currentLocation = assign({}, currentLocation || currentRoute.value);
-    if (typeof rawLocation === "string") {
-      const locationNormalized = parseURL(parseQuery$1, rawLocation, currentLocation.path);
-      const matchedRoute2 = matcher.resolve({ path: locationNormalized.path }, currentLocation);
-      const href2 = routerHistory.createHref(locationNormalized.fullPath);
-      return assign(locationNormalized, matchedRoute2, {
-        params: decodeParams(matchedRoute2.params),
-        hash: decode(locationNormalized.hash),
-        redirectedFrom: void 0,
-        href: href2
-      });
-    }
-    let matcherLocation;
-    if ("path" in rawLocation) {
-      matcherLocation = assign({}, rawLocation, {
-        path: parseURL(parseQuery$1, rawLocation.path, currentLocation.path).path
-      });
-    } else {
-      const targetParams = assign({}, rawLocation.params);
-      for (const key in targetParams) {
-        if (targetParams[key] == null) {
-          delete targetParams[key];
-        }
-      }
-      matcherLocation = assign({}, rawLocation, {
-        params: encodeParams(rawLocation.params)
-      });
-      currentLocation.params = encodeParams(currentLocation.params);
-    }
-    const matchedRoute = matcher.resolve(matcherLocation, currentLocation);
-    const hash = rawLocation.hash || "";
-    matchedRoute.params = normalizeParams(decodeParams(matchedRoute.params));
-    const fullPath = stringifyURL(stringifyQuery$1, assign({}, rawLocation, {
-      hash: encodeHash(hash),
-      path: matchedRoute.path
-    }));
-    const href = routerHistory.createHref(fullPath);
-    return assign({
-      fullPath,
-      hash,
-      query: stringifyQuery$1 === stringifyQuery ? normalizeQuery(rawLocation.query) : rawLocation.query || {}
-    }, matchedRoute, {
-      redirectedFrom: void 0,
-      href
-    });
-  }
-  function locationAsObject(to) {
-    return typeof to === "string" ? parseURL(parseQuery$1, to, currentRoute.value.path) : assign({}, to);
-  }
-  function checkCanceledNavigation(to, from) {
-    if (pendingLocation !== to) {
-      return createRouterError(8, {
-        from,
-        to
-      });
-    }
-  }
-  function push(to) {
-    return pushWithRedirect(to);
-  }
-  function replace(to) {
-    return push(assign(locationAsObject(to), { replace: true }));
-  }
-  function handleRedirectRecord(to) {
-    const lastMatched = to.matched[to.matched.length - 1];
-    if (lastMatched && lastMatched.redirect) {
-      const { redirect } = lastMatched;
-      let newTargetLocation = typeof redirect === "function" ? redirect(to) : redirect;
-      if (typeof newTargetLocation === "string") {
-        newTargetLocation = newTargetLocation.includes("?") || newTargetLocation.includes("#") ? newTargetLocation = locationAsObject(newTargetLocation) : { path: newTargetLocation };
-        newTargetLocation.params = {};
-      }
-      return assign({
-        query: to.query,
-        hash: to.hash,
-        params: to.params
-      }, newTargetLocation);
-    }
-  }
-  function pushWithRedirect(to, redirectedFrom) {
-    const targetLocation = pendingLocation = resolve(to);
-    const from = currentRoute.value;
-    const data = to.state;
-    const force = to.force;
-    const replace2 = to.replace === true;
-    const shouldRedirect = handleRedirectRecord(targetLocation);
-    if (shouldRedirect)
-      return pushWithRedirect(assign(locationAsObject(shouldRedirect), {
-        state: data,
-        force,
-        replace: replace2
-      }), redirectedFrom || targetLocation);
-    const toLocation = targetLocation;
-    toLocation.redirectedFrom = redirectedFrom;
-    let failure;
-    if (!force && isSameRouteLocation(stringifyQuery$1, from, targetLocation)) {
-      failure = createRouterError(16, { to: toLocation, from });
-      handleScroll(from, from, true, false);
-    }
-    return (failure ? Promise.resolve(failure) : navigate(toLocation, from)).catch((error) => isNavigationFailure(error) ? error : triggerError(error, toLocation, from)).then((failure2) => {
-      if (failure2) {
-        if (isNavigationFailure(failure2, 2)) {
-          return pushWithRedirect(assign(locationAsObject(failure2.to), {
-            state: data,
-            force,
-            replace: replace2
-          }), redirectedFrom || toLocation);
-        }
-      } else {
-        failure2 = finalizeNavigation(toLocation, from, true, replace2, data);
-      }
-      triggerAfterEach(toLocation, from, failure2);
-      return failure2;
-    });
-  }
-  function checkCanceledNavigationAndReject(to, from) {
-    const error = checkCanceledNavigation(to, from);
-    return error ? Promise.reject(error) : Promise.resolve();
-  }
-  function navigate(to, from) {
-    let guards;
-    const [leavingRecords, updatingRecords, enteringRecords] = extractChangingRecords(to, from);
-    guards = extractComponentsGuards(leavingRecords.reverse(), "beforeRouteLeave", to, from);
-    for (const record of leavingRecords) {
-      record.leaveGuards.forEach((guard) => {
-        guards.push(guardToPromiseFn(guard, to, from));
-      });
-    }
-    const canceledNavigationCheck = checkCanceledNavigationAndReject.bind(null, to, from);
-    guards.push(canceledNavigationCheck);
-    return runGuardQueue(guards).then(() => {
-      guards = [];
-      for (const guard of beforeGuards.list()) {
-        guards.push(guardToPromiseFn(guard, to, from));
-      }
-      guards.push(canceledNavigationCheck);
-      return runGuardQueue(guards);
-    }).then(() => {
-      guards = extractComponentsGuards(updatingRecords, "beforeRouteUpdate", to, from);
-      for (const record of updatingRecords) {
-        record.updateGuards.forEach((guard) => {
-          guards.push(guardToPromiseFn(guard, to, from));
-        });
-      }
-      guards.push(canceledNavigationCheck);
-      return runGuardQueue(guards);
-    }).then(() => {
-      guards = [];
-      for (const record of to.matched) {
-        if (record.beforeEnter && !from.matched.includes(record)) {
-          if (Array.isArray(record.beforeEnter)) {
-            for (const beforeEnter of record.beforeEnter)
-              guards.push(guardToPromiseFn(beforeEnter, to, from));
-          } else {
-            guards.push(guardToPromiseFn(record.beforeEnter, to, from));
-          }
-        }
-      }
-      guards.push(canceledNavigationCheck);
-      return runGuardQueue(guards);
-    }).then(() => {
-      to.matched.forEach((record) => record.enterCallbacks = {});
-      guards = extractComponentsGuards(enteringRecords, "beforeRouteEnter", to, from);
-      guards.push(canceledNavigationCheck);
-      return runGuardQueue(guards);
-    }).then(() => {
-      guards = [];
-      for (const guard of beforeResolveGuards.list()) {
-        guards.push(guardToPromiseFn(guard, to, from));
-      }
-      guards.push(canceledNavigationCheck);
-      return runGuardQueue(guards);
-    }).catch((err) => isNavigationFailure(err, 8) ? err : Promise.reject(err));
-  }
-  function triggerAfterEach(to, from, failure) {
-    for (const guard of afterGuards.list())
-      guard(to, from, failure);
-  }
-  function finalizeNavigation(toLocation, from, isPush, replace2, data) {
-    const error = checkCanceledNavigation(toLocation, from);
-    if (error)
-      return error;
-    const isFirstNavigation = from === START_LOCATION_NORMALIZED;
-    const state = !isBrowser ? {} : history.state;
-    if (isPush) {
-      if (replace2 || isFirstNavigation)
-        routerHistory.replace(toLocation.fullPath, assign({
-          scroll: isFirstNavigation && state && state.scroll
-        }, data));
-      else
-        routerHistory.push(toLocation.fullPath, data);
-    }
-    currentRoute.value = toLocation;
-    handleScroll(toLocation, from, isPush, isFirstNavigation);
-    markAsReady();
-  }
-  let removeHistoryListener;
-  function setupListeners() {
-    removeHistoryListener = routerHistory.listen((to, _from, info) => {
-      const toLocation = resolve(to);
-      const shouldRedirect = handleRedirectRecord(toLocation);
-      if (shouldRedirect) {
-        pushWithRedirect(assign(shouldRedirect, { replace: true }), toLocation).catch(noop);
-        return;
-      }
-      pendingLocation = toLocation;
-      const from = currentRoute.value;
-      if (isBrowser) {
-        saveScrollPosition(getScrollKey(from.fullPath, info.delta), computeScrollPosition());
-      }
-      navigate(toLocation, from).catch((error) => {
-        if (isNavigationFailure(error, 4 | 8)) {
-          return error;
-        }
-        if (isNavigationFailure(error, 2)) {
-          pushWithRedirect(error.to, toLocation).then((failure) => {
-            if (isNavigationFailure(failure, 4 | 16) && !info.delta && info.type === NavigationType.pop) {
-              routerHistory.go(-1, false);
-            }
-          }).catch(noop);
-          return Promise.reject();
-        }
-        if (info.delta)
-          routerHistory.go(-info.delta, false);
-        return triggerError(error, toLocation, from);
-      }).then((failure) => {
-        failure = failure || finalizeNavigation(toLocation, from, false);
-        if (failure) {
-          if (info.delta) {
-            routerHistory.go(-info.delta, false);
-          } else if (info.type === NavigationType.pop && isNavigationFailure(failure, 4 | 16)) {
-            routerHistory.go(-1, false);
-          }
-        }
-        triggerAfterEach(toLocation, from, failure);
-      }).catch(noop);
-    });
-  }
-  let readyHandlers = useCallbacks();
-  let errorHandlers = useCallbacks();
-  let ready;
-  function triggerError(error, to, from) {
-    markAsReady(error);
-    const list = errorHandlers.list();
-    if (list.length) {
-      list.forEach((handler) => handler(error, to, from));
-    } else {
-      console.error(error);
-    }
-    return Promise.reject(error);
-  }
-  function isReady() {
-    if (ready && currentRoute.value !== START_LOCATION_NORMALIZED)
-      return Promise.resolve();
-    return new Promise((resolve2, reject) => {
-      readyHandlers.add([resolve2, reject]);
-    });
-  }
-  function markAsReady(err) {
-    if (ready)
-      return;
-    ready = true;
-    setupListeners();
-    readyHandlers.list().forEach(([resolve2, reject]) => err ? reject(err) : resolve2());
-    readyHandlers.reset();
-  }
-  function handleScroll(to, from, isPush, isFirstNavigation) {
-    const { scrollBehavior } = options;
-    if (!isBrowser || !scrollBehavior)
-      return Promise.resolve();
-    const scrollPosition = !isPush && getSavedScrollPosition(getScrollKey(to.fullPath, 0)) || (isFirstNavigation || !isPush) && history.state && history.state.scroll || null;
-    return nextTick().then(() => scrollBehavior(to, from, scrollPosition)).then((position) => position && scrollToPosition(position)).catch((err) => triggerError(err, to, from));
-  }
-  const go = (delta) => routerHistory.go(delta);
-  let started;
-  const installedApps = new Set();
-  const router2 = {
-    currentRoute,
-    addRoute,
-    removeRoute,
-    hasRoute,
-    getRoutes,
-    resolve,
-    options,
-    push,
-    replace,
-    go,
-    back: () => go(-1),
-    forward: () => go(1),
-    beforeEach: beforeGuards.add,
-    beforeResolve: beforeResolveGuards.add,
-    afterEach: afterGuards.add,
-    onError: errorHandlers.add,
-    isReady,
-    install(app) {
-      const router3 = this;
-      app.component("RouterLink", RouterLink);
-      app.component("RouterView", RouterView);
-      app.config.globalProperties.$router = router3;
-      Object.defineProperty(app.config.globalProperties, "$route", {
-        enumerable: true,
-        get: () => unref(currentRoute)
-      });
-      if (isBrowser && !started && currentRoute.value === START_LOCATION_NORMALIZED) {
-        started = true;
-        push(routerHistory.location).catch((err) => {
-        });
-      }
-      const reactiveRoute = {};
-      for (const key in START_LOCATION_NORMALIZED) {
-        reactiveRoute[key] = computed(() => currentRoute.value[key]);
-      }
-      app.provide(routerKey, router3);
-      app.provide(routeLocationKey, reactive(reactiveRoute));
-      app.provide(routerViewLocationKey, currentRoute);
-      const unmountApp = app.unmount;
-      installedApps.add(app);
-      app.unmount = function() {
-        installedApps.delete(app);
-        if (installedApps.size < 1) {
-          pendingLocation = START_LOCATION_NORMALIZED;
-          removeHistoryListener && removeHistoryListener();
-          currentRoute.value = START_LOCATION_NORMALIZED;
-          started = false;
-          ready = false;
-        }
-        unmountApp();
-      };
-    }
-  };
-  return router2;
-}
-function runGuardQueue(guards) {
-  return guards.reduce((promise, guard) => promise.then(() => guard()), Promise.resolve());
-}
-function extractChangingRecords(to, from) {
-  const leavingRecords = [];
-  const updatingRecords = [];
-  const enteringRecords = [];
-  const len = Math.max(from.matched.length, to.matched.length);
-  for (let i = 0; i < len; i++) {
-    const recordFrom = from.matched[i];
-    if (recordFrom) {
-      if (to.matched.find((record) => isSameRouteRecord(record, recordFrom)))
-        updatingRecords.push(recordFrom);
-      else
-        leavingRecords.push(recordFrom);
-    }
-    const recordTo = to.matched[i];
-    if (recordTo) {
-      if (!from.matched.find((record) => isSameRouteRecord(record, recordTo))) {
-        enteringRecords.push(recordTo);
-      }
-    }
-  }
-  return [leavingRecords, updatingRecords, enteringRecords];
-}
-function useRoute() {
-  return inject(routeLocationKey);
-}
-const _hoisted_1$5 = { key: 0 };
-const _hoisted_2$4 = { class: "tile is-parent" };
-const _hoisted_3$3 = { key: 0 };
-function setup$1(__props) {
-  return (_ctx, _cache) => {
-    const _component_router_link = resolveComponent("router-link");
-    const _component_router_view = resolveComponent("router-view");
-    return openBlock(), createElementBlock(Fragment, null, [
-      createElementVNode("div", null, [
-        createElementVNode("h3", null, toDisplayString(__props.title), 1),
-        _ctx.cards ? (openBlock(), createElementBlock("div", _hoisted_1$5, [
-          createElementVNode("nav", _hoisted_2$4, [
-            (openBlock(true), createElementBlock(Fragment, null, renderList(_ctx.cards, (card) => {
-              return openBlock(), createBlock(_component_router_link, {
-                key: card.title,
-                to: { name: "card.scroll", params: { id: card.id } }
-              }, {
-                default: withCtx(() => [
-                  createVNode(_sfc_main$6, { card }, null, 8, ["card"])
-                ]),
-                _: 2
-              }, 1032, ["to"]);
-            }), 128))
-          ])
-        ])) : createCommentVNode("", true)
-      ]),
-      _ctx.cards ? (openBlock(), createElementBlock("div", _hoisted_3$3, [
-        createVNode(_component_router_link, {
-          key: __props.id,
-          to: { name: "card.show", params: { id: __props.id } }
-        }, {
-          default: withCtx(() => [
-            createVNode(_component_router_view, { cards: _ctx.cards }, null, 8, ["cards"])
-          ]),
-          _: 1
-        }, 8, ["to"])
-      ])) : createCommentVNode("", true)
-    ], 64);
-  };
-}
-const __default__$1 = {
-  data() {
-    return {
-      cards: null
-    };
-  },
-  methods: {
-    async getCardData() {
-      this.cards = await fetch("http://localhost:3064/cards").then((response) => response.json());
-    }
-  },
-  async created() {
-    this.getCardData();
-    this.$watch(() => this.$route.matched.name, async () => this.getCardData());
-  }
-};
-const _sfc_main$5 = /* @__PURE__ */ Object.assign(__default__$1, {
-  props: {
-    title: String,
-    card: Object,
-    id: Number
-  },
-  setup: setup$1
-});
-const _hoisted_1$4 = /* @__PURE__ */ createElementVNode("div", null, "Cardlist:", -1);
-const _hoisted_2$3 = /* @__PURE__ */ createTextVNode(" Cards List Loading ");
-const _sfc_main$4 = {
-  props: {
-    id: String
-  },
-  setup(__props) {
-    return (_ctx, _cache) => {
-      return openBlock(), createElementBlock(Fragment, null, [
-        _hoisted_1$4,
-        (openBlock(), createBlock(Suspense, null, {
-          default: withCtx(() => [
-            createVNode(_sfc_main$5, {
-              title: "Interesting",
-              id: parseInt(__props.id)
-            }, null, 8, ["id"])
-          ]),
-          fallback: withCtx(() => [
-            _hoisted_2$3
-          ]),
-          _: 1
-        }))
-      ], 64);
-    };
-  }
-};
-const _hoisted_1$3 = { class: "container" };
-const _hoisted_2$2 = { class: "section" };
-const _hoisted_3$2 = { class: "tile" };
-const _hoisted_4$2 = { class: "tile is-vertical" };
-const _hoisted_5$2 = { class: "tile is-ancestor" };
-const _hoisted_6$2 = /* @__PURE__ */ createElementVNode("div", { class: "tile is-child is-4 notification is-warning" }, "This is Application 2: Cards", -1);
-const _hoisted_7$1 = { class: "tile is-child is-8 notification is-secondary" };
+var RouteView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render]]);
+const _hoisted_1 = { class: "container" };
+const _hoisted_2 = { class: "section" };
+const _hoisted_3 = { class: "tile" };
+const _hoisted_4 = { class: "tile is-vertical" };
+const _hoisted_5 = { class: "tile is-ancestor" };
+const _hoisted_6 = /* @__PURE__ */ createBaseVNode("div", { class: "tile is-child is-4 notification is-warning" }, "This is Application 2: Cards", -1);
+const _hoisted_7 = { class: "tile is-child is-8 notification is-secondary" };
 const _hoisted_8 = /* @__PURE__ */ createTextVNode("Current route: ");
 const _hoisted_9 = { class: "tile notification is-child is-danger" };
-const _sfc_main$3 = {
+const _sfc_main = {
   setup(__props) {
     return (_ctx, _cache) => {
       const _component_router_view = resolveComponent("router-view");
-      return openBlock(), createElementBlock("div", _hoisted_1$3, [
-        createElementVNode("section", _hoisted_2$2, [
-          createElementVNode("div", _hoisted_3$2, [
-            createElementVNode("div", _hoisted_4$2, [
-              createElementVNode("div", _hoisted_5$2, [
-                _hoisted_6$2,
-                createElementVNode("div", _hoisted_7$1, [
+      return openBlock(), createElementBlock("div", _hoisted_1, [
+        createBaseVNode("section", _hoisted_2, [
+          createBaseVNode("div", _hoisted_3, [
+            createBaseVNode("div", _hoisted_4, [
+              createBaseVNode("div", _hoisted_5, [
+                _hoisted_6,
+                createBaseVNode("div", _hoisted_7, [
                   _hoisted_8,
                   createVNode(RouteView)
                 ])
               ]),
-              createElementVNode("div", _hoisted_9, [
+              createBaseVNode("div", _hoisted_9, [
                 createVNode(_component_router_view)
               ])
             ])
@@ -1758,138 +1045,4 @@ const _sfc_main$3 = {
     };
   }
 };
-var bulma = "";
-const _hoisted_1$2 = { class: "card" };
-const _hoisted_2$1 = { class: "card-header" };
-const _hoisted_3$1 = { class: "card-header-title" };
-const _hoisted_4$1 = { class: "card-image" };
-const _hoisted_5$1 = ["src", "alt"];
-const _hoisted_6$1 = { class: "card-content" };
-const _sfc_main$2 = {
-  props: {
-    cards: Object,
-    id: Number
-  },
-  setup(__props) {
-    const route = useRoute();
-    const cardId = ref();
-    cardId.value = parseInt(route.params.id);
-    watch(() => route.params.id, (newId) => {
-      cardId.value = parseInt(newId);
-      console.log(newId);
-    });
-    console.log(cardId);
-    return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("div", _hoisted_1$2, [
-        createElementVNode("header", _hoisted_2$1, [
-          createElementVNode("h3", _hoisted_3$1, toDisplayString(__props.cards[__props.id].title), 1)
-        ]),
-        createElementVNode("figure", _hoisted_4$1, [
-          createElementVNode("img", {
-            src: `/images/${__props.cards[__props.id].image.filename}`,
-            alt: __props.cards[__props.id].image.alt
-          }, null, 8, _hoisted_5$1)
-        ]),
-        createElementVNode("div", _hoisted_6$1, [
-          createElementVNode("p", null, toDisplayString(__props.cards[__props.id].description.short), 1)
-        ])
-      ]);
-    };
-  }
-};
-const _hoisted_1$1 = { class: "up-nav" };
-const _sfc_main$1 = {
-  setup(__props) {
-    useRoute();
-    return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("nav", _hoisted_1$1, [
-        createElementVNode("button", {
-          onClick: _cache[0] || (_cache[0] = ($event) => this.$router.push({ path: "/" }))
-        }, "Up to Cards List")
-      ]);
-    };
-  }
-};
-const _hoisted_1 = { key: 0 };
-const _hoisted_2 = { class: "card" };
-const _hoisted_3 = { class: "card-header" };
-const _hoisted_4 = { class: "card-header-title" };
-const _hoisted_5 = { class: "card-image" };
-const _hoisted_6 = ["src", "alt"];
-const _hoisted_7 = { class: "card-content" };
-function setup(__props) {
-  return (_ctx, _cache) => {
-    return openBlock(), createElementBlock(Fragment, null, [
-      createVNode(_sfc_main$1),
-      _ctx.card ? (openBlock(), createElementBlock("div", _hoisted_1, [
-        createElementVNode("div", _hoisted_2, [
-          createElementVNode("header", _hoisted_3, [
-            createElementVNode("h3", _hoisted_4, toDisplayString(_ctx.card.title), 1)
-          ]),
-          createElementVNode("figure", _hoisted_5, [
-            createElementVNode("img", {
-              src: `/images/${_ctx.card.image.filename}`,
-              alt: _ctx.card.image.alt
-            }, null, 8, _hoisted_6)
-          ]),
-          createElementVNode("div", _hoisted_7, [
-            createElementVNode("p", null, toDisplayString(_ctx.card.description), 1)
-          ])
-        ])
-      ])) : createCommentVNode("", true)
-    ], 64);
-  };
-}
-const __default__ = {
-  data() {
-    return {
-      card: null
-    };
-  },
-  methods: {
-    async getCardData() {
-      this.card = await fetch(`http://localhost:3064/cards/${this.id}`).then((response) => response.json());
-    }
-  },
-  async created() {
-    this.getCardData();
-    this.$watch(() => this.$route.params.id, async () => this.getCardData());
-  }
-};
-const _sfc_main = /* @__PURE__ */ Object.assign(__default__, {
-  props: {
-    id: Number
-  },
-  setup
-});
-const routes = [
-  {
-    path: "/",
-    name: "AppHome",
-    component: _sfc_main$4,
-    props: (route) => __spreadValues({}, route.params),
-    children: [
-      {
-        path: "cardscroll/:id",
-        name: "card.scroll",
-        component: _sfc_main$2,
-        props: (route) => __spreadProps(__spreadValues({}, route.params), {
-          id: parseInt(route.params.id)
-        })
-      }
-    ]
-  },
-  {
-    path: "/card/:id/",
-    name: "card.show",
-    component: _sfc_main,
-    props: (route) => __spreadProps(__spreadValues({}, route.params), {
-      id: parseInt(route.params.id)
-    })
-  }
-];
-const router = createRouter({
-  history: createWebHistory(),
-  routes
-});
-createApp(_sfc_main$3).use(router).mount("#app");
+export { _sfc_main as default };
