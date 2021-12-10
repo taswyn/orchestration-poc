@@ -16,11 +16,12 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "orchestration-poc": "file:..",
-    "vue": "^3.2.16"
+    "vue": "^3.2.16",
+    "vue-router": "^4.0.12"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^1.9.3",
-    "vite": "^2.6.4"
+    "vite": "^2.6.4",
+    "json-server": "^0.17.0"
   }
 }
