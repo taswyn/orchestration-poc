@@ -18,8 +18,13 @@
     "buildorchestration": "npm run build --prefix ./orchestration-app",
     "serve": "concurrently --kill-others \"node src/server.js\" \"npm run serveapp1\" \"npm run serveapp2\"",
     "serveapp1": "npm run json-server --prefix ./component-app1",
-    "serveapp2": "npm run json-server --prefix ./component-app1",
-    "json-server": "json-server --watch src/assets/global-structure.json --port 3075"
+    "serveapp2": "npm run json-server --prefix ./component-app2",
+    "json-server": "json-server --watch src/assets/global-structure.json --port 3075",
+    "install": "npm run installapp1 & npm run installapp2 & npm run installglobalnav & npm run installorchestration",
+    "installapp1": "npm install --prefix ./component-app1 ./component-app1",
+    "installapp2": "npm install --prefix ./component-app2 ./component-app2",
+    "installglobalnav": "npm install --prefix ./global-navigation ./global-navigation",
+    "installorchestration": "npm install --prefix ./orchestration-app ./orchestration-app"
   },
   "devDependencies": {
     "concurrently": "^6.4.0",
