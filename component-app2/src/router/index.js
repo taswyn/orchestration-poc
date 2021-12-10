@@ -2,6 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { defineAsyncComponent } from 'vue'
 
 import AppHome from '@/views/AppHome.vue'
+import QuickCard from '@/components/QuickCard.vue'
+import SingleCard from '@/views/SingleCard.vue'
+// note: converted from dynamics to temporarily ease difficulty with UMD vs ESM
+// TODO: solve dynamics & ESM importing
 
 const routes = [
     { 
@@ -15,7 +19,7 @@ const routes = [
             {
                 path: 'cardscroll/:id',
                 name: 'card.scroll',
-                component: () => import ('@/components/QuickCard.vue'),
+                component: QuickCard,
                 props: route => ({
                     ...route.params,
                     id: parseInt(route.params.id)
@@ -26,7 +30,7 @@ const routes = [
     {
         path: '/card/:id/',
         name: 'card.show',
-        component: () => import('@/views/SingleCard.vue'),
+        component: SingleCard,
         props: route => ({
             ...route.params,
             id: parseInt(route.params.id)
