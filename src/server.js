@@ -11,7 +11,7 @@ const app = express();
 
 app.use(cors());
 
-app.use(express.static(path.resolve(dirname, 'compiled-components'), {
+app.use(express.static(path.resolve(dirname, '../compiled-components'), {
   maxAge: '365d',
 }));
 
