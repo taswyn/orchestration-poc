@@ -1,15 +1,17 @@
 <script setup>
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
-import HelloWorld from "./components/HelloWorld.vue";
-import RoutedComponent from "./components/ComponentRouter.vue";
+import RoutedComponent from "@/components/ComponentRouter.vue";
+import dynamicRouteSetup from "@/utils/dyanmicRouteSetup";
 
+const appList = dynamicRouteSetup()
+console.log(appList)
 const test = {
   name: "Application1",
   url: "http://localhost:8200/Application2.umd.js",
 };
-const Application1Properties = {
-  msg: "Testing Application1 Orchestration",
+const ApplicationProperties = {
+  msg: "Testing Application Orchestration",
 };
 const NavigationProperties = {
   msg: "Application list goes here!"
@@ -34,6 +36,7 @@ const nav = {
 
 <template>
   <div>
+    test
     <nav>
       <Suspense>
         <template #default>
@@ -46,17 +49,8 @@ const nav = {
         </template>
       </Suspense>
     </nav>
-    <hello-world msg="Orchestration" />
-    <Suspense>
-      <template #default>
-        <div>
-          <component :is="RoutedComponent" :component="test" :props="Application1Properties" />
-        </div>
-      </template>
-      <template #fallback>
-        <div>Loading...</div>
-      </template>
-    </Suspense>
+    <h1>Orchestration</h1>
+    <router-link :appList="appList"></router-link>
   </div>
 </template>
 
