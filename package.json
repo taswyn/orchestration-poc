@@ -1,21 +1,27 @@
 {
+  "name": "orchestration-poc",
+  "version": "0.0.0",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.17.1"
   },
   "scripts": {
-    "dev": "concurrently --kill-others \"npm run json-server\" \"npm run serve",
+    "dev": "concurrently --kill-others \"npm run json-server\" \"npm run serveapp1\" \"npm run serveapp2\" \"npm run dev --prefix ./orchestration-app\"",
     "build": "npm run buildapp1 && npm run buildapp2 && npm run buildnav && npm run buildorchestration",
     "buildapp1": "npm run build --prefix ./component-app1",
     "buildapp2": "npm run build --prefix ./component-app2",
     "buildnav": "npm run build --prefix ./global-navigation",
     "buildorchestration": "npm run build --prefix ./orchestration-app",
-    "serve": "node src/server.js",
+    "serve": "concurrently --kill-others \"node src/server.js\" \"npm run serveapp1\" \"npm run serveapp2\"",
+    "serveapp1": "npm run json-serve --prefix ./componenet-app1",
+    "serveapp2": "npm run json-serve --prefix ./componenet-app1",
     "json-server": "json-server --watch src/assets/global-structure.json --port 3075"
   },
   "devDependencies": {
-    "concurrently": "^6.4.0",
     "json-server": "^0.17.0"
   }
 }

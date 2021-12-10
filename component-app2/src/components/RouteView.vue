@@ -2,7 +2,7 @@
 </script>
 
 <template>
-    <section>
+    <div>
         {{ this.$route }}
-    </section>
+    </div>
 </template>
