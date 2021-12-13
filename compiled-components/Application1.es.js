@@ -1570,7 +1570,7 @@ const _sfc_main$1 = {
     };
   }
 };
-var HelloDiv1 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-5f81f1a9"]]);
+var HelloDiv1 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-697c6148"]]);
 var Application1_vue_vue_type_style_index_0_lang = "";
 const _hoisted_1 = /* @__PURE__ */ createBaseVNode("p", null, "Application 1 is being told to say ", -1);
 const _sfc_main = {

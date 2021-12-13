@@ -20,6 +20,7 @@
   "dependencies": {
     "bulma": "^0.9.3",
     "bulma-start": "^0.0.4",
+    "orchestration-poc": "file:..",
     "vue": "^3.2.16",
     "vue-router": "^4.0.12"
   },

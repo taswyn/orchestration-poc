@@ -1571,7 +1571,7 @@ const _sfc_main$1 = {
     };
   }
 };
-var HelloNav = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-4443915a"]]);
+var HelloNav = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-351cd2c6"]]);
 var App_vue_vue_type_style_index_0_lang = "";
 const _hoisted_1 = /* @__PURE__ */ createBaseVNode("p", null, "Global Navigation says:", -1);
 const _hoisted_2 = /* @__PURE__ */ createBaseVNode("p", null, "Global Navigation was told to say:", -1);

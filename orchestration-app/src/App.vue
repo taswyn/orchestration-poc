@@ -5,10 +5,11 @@ import RoutedComponent from "@/components/RoutedComponent.vue";
 //import dynamicRouteSetup from "@/utils/dyanmicRouteSetup";
 import { useRouter, useRoute } from 'vue-router'
 import { ref } from 'vue'
+import { dynamicRouteSetup } from '@/router'
 
 const router = useRouter()
 
-async function dynamicRouteSetup(router) {
+/* async function dynamicRouteSetup(router) {
     const applicationsList = await fetch('http://localhost:3075/applications').then(response => response.json())
 
     const appMap = new Map
@@ -24,7 +25,7 @@ async function dynamicRouteSetup(router) {
     }
 
     return appMap
-}
+} */
 
 const appList = ref()
 appList.value = null
