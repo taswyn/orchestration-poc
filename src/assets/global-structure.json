@@ -4,25 +4,25 @@
             "mapID" : 0,
             "name": "Dashboard",
             "resolver": "",
-            "URI": "http://localhost:8200/Application1.umd.js"
+            "url": "http://localhost:8200/Application1.umd.js"
         },
         {
             "mapID" : 1,
             "name": "Text",
             "resolver": "text",
-            "URI": "http://localhost:8200/Application1.umd.js"
+            "url": "http://localhost:8200/Application1.umd.js"
         },
         {
             "mapID" : 2,
             "name": "Cards",
             "resolver": "cards",
-            "URI": "http://localhost:8200/Application2.umd.js"
+            "url": "http://localhost:8200/Application2.umd.js"
         }
     ],
     "components" : [
         {
             "name": "Navigation",
-            "URI": "http://localhost:8200/Navigation.umd.js"
+            "url": "http://localhost:8200/Navigation.umd.js"
         }
     ]
 }

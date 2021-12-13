@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { defineAsyncComponent } from 'vue'
-import ComponentRouter from '@/components/ComponentRouter.vue'
+import ComponentRouter from '@/components/RoutedComponent.vue'
 import PrimaryLayout from '@/views/PrimaryLayout.vue'
 
 /** Notes

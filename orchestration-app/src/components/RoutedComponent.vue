@@ -7,7 +7,7 @@
 
 <script>
 import { defineComponent, defineAsyncComponent, h } from "vue";
-import importComponent from '../utils/importComponent';
+import importComponent from '@/utils/importComponent';
 
 export default defineComponent({
   name: 'RoutedComponent',

@@ -1,18 +1,47 @@
 <script setup>
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup
-import RoutedComponent from "@/components/ComponentRouter.vue";
-import dynamicRouteSetup from "@/utils/dyanmicRouteSetup";
+import RoutedComponent from "@/components/RoutedComponent.vue";
+//import dynamicRouteSetup from "@/utils/dyanmicRouteSetup";
+import { useRouter, useRoute } from 'vue-router'
+import { ref } from 'vue'
 
-const appList = dynamicRouteSetup()
+const router = useRouter()
+
+async function dynamicRouteSetup(router) {
+    const applicationsList = await fetch('http://localhost:3075/applications').then(response => response.json())
+
+    const appMap = new Map
+    for (const applicationEntry in applicationsList) {
+        const application = applicationsList[applicationEntry]
+        console.log({"resolver" : application.resolver, "router":router.hasRoute(application.resolver)})
+        if (!router.hasRoute(application.resolver)) {
+          
+            router.addRoute({ name: application.resolver, path: `/${application.resolver}`, component: RoutedComponent})
+        }
+        console.log(application)
+        appMap.set(`/${application.resolver}`, application)
+    }
+
+    return appMap
+}
+
+const appList = ref()
+appList.value = null
+
+const setAppList = async () => {
+  appList.value = await dynamicRouteSetup(router)
+  console.log(appList.value)
+}
+
+setAppList()
+
 console.log(appList)
 const test = {
   name: "Application1",
   url: "http://localhost:8200/Application2.umd.js",
 };
-const ApplicationProperties = {
-  msg: "Testing Application Orchestration",
-};
+
 const NavigationProperties = {
   msg: "Application list goes here!"
 }
@@ -35,7 +64,7 @@ const nav = {
 </script>
 
 <template>
-  <div>
+  <div v-if="appList">
     test
     <nav>
       <Suspense>
@@ -50,7 +79,7 @@ const nav = {
       </Suspense>
     </nav>
     <h1>Orchestration</h1>
-    <router-link :appList="appList"></router-link>
+    <router-view :appList="appList"></router-view>
   </div>
 </template>
 
