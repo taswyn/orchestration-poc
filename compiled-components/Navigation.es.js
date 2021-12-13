@@ -843,6 +843,18 @@ function queueEffectWithSuspense(fn, suspense) {
     queuePostFlushCb(fn);
   }
 }
+function inject(key, defaultValue, treatDefaultAsFactory = false) {
+  const instance = currentInstance || currentRenderingInstance;
+  if (instance) {
+    const provides = instance.parent == null ? instance.vnode.appContext && instance.vnode.appContext.provides : instance.parent.provides;
+    if (provides && key in provides) {
+      return provides[key];
+    } else if (arguments.length > 1) {
+      return treatDefaultAsFactory && isFunction(defaultValue) ? defaultValue.call(instance.proxy) : defaultValue;
+    } else
+      ;
+  }
+}
 function resolveMergedOptions(instance) {
   const base = instance.type;
   const { mixins, extends: extendsOptions } = base;
@@ -976,6 +988,9 @@ function setupBlock(vnode) {
 function createElementBlock(type, props, children, patchFlag, dynamicProps, shapeFlag) {
   return setupBlock(createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, true));
 }
+function createBlock(type, props, children, patchFlag, dynamicProps) {
+  return setupBlock(createVNode(type, props, children, patchFlag, dynamicProps, true));
+}
 function isVNode(value) {
   return value ? value.__v_isVNode === true : false;
 }
@@ -1096,6 +1111,9 @@ function cloneVNode(vnode, extraProps, mergeRef = false) {
 function createTextVNode(text = " ", flag = 0) {
   return createVNode(Text, null, text, flag);
 }
+function createCommentVNode(text = "", asBlock = false) {
+  return asBlock ? (openBlock(), createBlock(Comment, null, text)) : createVNode(Comment, null, text);
+}
 function normalizeChildren(vnode, children) {
   let type = 0;
   const { shapeFlag } = vnode;
@@ -1162,6 +1180,38 @@ function mergeProps(...args) {
         ret[key] = toMerge[key];
       }
     }
+  }
+  return ret;
+}
+function renderList(source, renderItem, cache, index) {
+  let ret;
+  const cached = cache && cache[index];
+  if (isArray(source) || isString(source)) {
+    ret = new Array(source.length);
+    for (let i = 0, l = source.length; i < l; i++) {
+      ret[i] = renderItem(source[i], i, void 0, cached && cached[i]);
+    }
+  } else if (typeof source === "number") {
+    ret = new Array(source);
+    for (let i = 0; i < source; i++) {
+      ret[i] = renderItem(i + 1, i, void 0, cached && cached[i]);
+    }
+  } else if (isObject(source)) {
+    if (source[Symbol.iterator]) {
+      ret = Array.from(source, (item, i) => renderItem(item, i, void 0, cached && cached[i]));
+    } else {
+      const keys = Object.keys(source);
+      ret = new Array(keys.length);
+      for (let i = 0, l = keys.length; i < l; i++) {
+        const key = keys[i];
+        ret[i] = renderItem(source[key], key, i, cached && cached[i]);
+      }
+    }
+  } else {
+    ret = [];
+  }
+  if (cache) {
+    cache[index] = ret;
   }
   return ret;
 }
@@ -1552,40 +1602,102 @@ function traverse(value, seen) {
   }
   return value;
 }
-var HelloNav_vue_vue_type_style_index_0_scoped_true_lang = "";
-var _export_sfc = (sfc, props) => {
-  const target = sfc.__vccOpts || sfc;
-  for (const [key, val] of props) {
-    target[key] = val;
-  }
-  return target;
-};
-const _sfc_main$1 = {
+const _hoisted_1$2 = { class: "tile is-child notification is-warning" };
+const _hoisted_2$1 = { class: "card-header-title" };
+const _sfc_main$2 = {
   props: {
-    msg: String
+    application: Object,
+    id: Number
   },
   setup(__props) {
-    ref(0);
     return (_ctx, _cache) => {
-      return openBlock(), createElementBlock("nav", null, toDisplayString(__props.msg), 1);
+      return openBlock(), createElementBlock("div", _hoisted_1$2, [
+        createBaseVNode("h3", _hoisted_2$1, toDisplayString(__props.application.name), 1)
+      ]);
     };
   }
 };
-var HelloNav = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-351cd2c6"]]);
-var App_vue_vue_type_style_index_0_lang = "";
-const _hoisted_1 = /* @__PURE__ */ createBaseVNode("p", null, "Global Navigation says:", -1);
-const _hoisted_2 = /* @__PURE__ */ createBaseVNode("p", null, "Global Navigation was told to say:", -1);
-const _sfc_main = {
-  props: {
-    msg: String
-  },
+/*!
+  * vue-router v4.0.12
+  * (c) 2021 Eduardo San Martin Morote
+  * @license MIT
+  */
+const hasSymbol = typeof Symbol === "function" && typeof Symbol.toStringTag === "symbol";
+const PolySymbol = (name) => hasSymbol ? Symbol(name) : "_vr_" + name;
+const routerKey = /* @__PURE__ */ PolySymbol("r");
+var NavigationType;
+(function(NavigationType2) {
+  NavigationType2["pop"] = "pop";
+  NavigationType2["push"] = "push";
+})(NavigationType || (NavigationType = {}));
+var NavigationDirection;
+(function(NavigationDirection2) {
+  NavigationDirection2["back"] = "back";
+  NavigationDirection2["forward"] = "forward";
+  NavigationDirection2["unknown"] = "";
+})(NavigationDirection || (NavigationDirection = {}));
+var NavigationFailureType;
+(function(NavigationFailureType2) {
+  NavigationFailureType2[NavigationFailureType2["aborted"] = 4] = "aborted";
+  NavigationFailureType2[NavigationFailureType2["cancelled"] = 8] = "cancelled";
+  NavigationFailureType2[NavigationFailureType2["duplicated"] = 16] = "duplicated";
+})(NavigationFailureType || (NavigationFailureType = {}));
+function useRouter() {
+  return inject(routerKey);
+}
+function useNav() {
+  const applicationsList = ref([]);
+  const fetchNav = async () => {
+    applicationsList.value = await fetch("http://localhost:3075/applications").then((response) => response.json()).then((applications) => {
+      let primary = applications.findIndex((application) => {
+        return application.resolver == "";
+      });
+      if (primary != -1) {
+        console.log(primary);
+        console.log(applications[primary]);
+        applications[primary].resolver = "primary";
+      }
+      return applications;
+    });
+  };
+  return {
+    applicationsList,
+    fetchNav
+  };
+}
+const _hoisted_1$1 = /* @__PURE__ */ createTextVNode(" Nav ");
+const _hoisted_2 = { key: 0 };
+const _hoisted_3 = { class: "tile is-parent" };
+const _sfc_main$1 = {
   setup(__props) {
+    useRouter();
+    const { applicationsList, fetchNav } = useNav();
+    fetchNav();
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", null, [
-        _hoisted_1,
-        createVNode(HelloNav, { msg: "Hello Vue 3 + Vite" }),
-        _hoisted_2,
-        createVNode(HelloNav, { msg: __props.msg }, null, 8, ["msg"])
+        _hoisted_1$1,
+        createBaseVNode("div", null, [
+          unref(applicationsList) ? (openBlock(), createElementBlock("div", _hoisted_2, [
+            createBaseVNode("nav", _hoisted_3, [
+              (openBlock(true), createElementBlock(Fragment, null, renderList(unref(applicationsList), (app) => {
+                return openBlock(), createBlock(_sfc_main$2, {
+                  key: app.mapId,
+                  application: app
+                }, null, 8, ["application"]);
+              }), 128))
+            ])
+          ])) : createCommentVNode("", true)
+        ])
+      ]);
+    };
+  }
+};
+const _hoisted_1 = { class: "navnav" };
+const _sfc_main = {
+  setup(__props) {
+    return (_ctx, _cache) => {
+      return openBlock(), createElementBlock("div", _hoisted_1, [
+        createVNode(_sfc_main$1)
       ]);
     };
   }

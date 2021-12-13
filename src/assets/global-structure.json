@@ -1,19 +1,19 @@
 {
     "applications" : [
         {
-            "mapID" : 0,
+            "mapId" : 0,
             "name": "Dashboard",
             "resolver": "",
             "url": "http://localhost:8200/Application1.umd.js"
         },
         {
-            "mapID" : 1,
+            "mapId" : 1,
             "name": "Text",
             "resolver": "text",
             "url": "http://localhost:8200/Application1.umd.js"
         },
         {
-            "mapID" : 2,
+            "mapId" : 2,
             "name": "Cards",
             "resolver": "cards",
             "url": "http://localhost:8200/Application2.umd.js"

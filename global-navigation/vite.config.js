@@ -17,6 +17,35 @@ export default defineConfig({
       // make sure to externalize deps that shouldn't be bundled
       // into your library
       //external: ['vue'],
+      //output: {
+      // Provide global variables to use in the UMD build
+      // for externalized deps
+      //   globals: {
+      //     vue: 'Vue'
+      //   }
+      // }
+      // external: ["vue"],
+      output: [{
+        format: "es",
+        esModule: true,
+        exports: "named",
+        globals: {
+          vue: "Vue"
+        }
+      }, {
+        format: "umd",
+        inlineDynamicImports: true,
+        interop: "esModule",
+        exports: "named",
+        globals: {
+          vue: "Vue"
+        }
+      }],
+    }
+    /* rollupOptions: {
+      // make sure to externalize deps that shouldn't be bundled
+      // into your library
+      external: ['vue'],
       output: {
         // Provide global variables to use in the UMD build
         // for externalized deps
@@ -24,7 +53,7 @@ export default defineConfig({
           vue: 'Vue'
         }
       }
-    }
+    } */
   },
   plugins: [vue()]
 })

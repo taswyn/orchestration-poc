@@ -24,23 +24,25 @@ watch(
 
 <template>
   <div>
-    <h3>{{ title }}</h3>
-    <div v-if="cards">
-      <nav class="tile is-parent">
-        <router-link
-          v-for="card in cards"
-          :key="card.title"
-          :to="{ name: 'card.scroll', params: { id: card.id } }"
-        >
-          <NavCard :card="card"></NavCard>
-        </router-link>
-      </nav>
+    <div>
+      <h3>{{ title }}</h3>
+      <div v-if="cards">
+        <nav class="tile is-parent">
+          <router-link
+            v-for="card in cards"
+            :key="card.title"
+            :to="{ name: 'card.scroll', params: { id: card.id } }"
+          >
+            <NavCard :card="card"></NavCard>
+          </router-link>
+        </nav>
+      </div>
     </div>
-  </div>
-  <div v-if="cards">
-    <router-link :key="id" :to="{ name: 'card.show', params: { id: id } }">
-      <router-view :cards="cards"></router-view>
-    </router-link>
+    <div v-if="cards">
+      <router-link :key="id" :to="{ name: 'card.show', params: { id: id } }">
+        <router-view :cards="cards"></router-view>
+      </router-link>
+    </div>
   </div>
 </template>
 
