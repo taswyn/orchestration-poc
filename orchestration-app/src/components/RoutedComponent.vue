@@ -1,12 +1,12 @@
 <template>
-  <div>Dynamic Component:
-    <Component :is="RoutedComponent"
-  v-bind="props" />
+  <div>
+    Dynamic Component:
+    <Component :is="RoutedComponent" v-bind="props" v-bind.sync="$attrs" />
   </div>
 </template>
 
 <script>
-import { defineComponent, defineAsyncComponent, h } from "vue";
+import { defineComponent, defineAsyncComponent, resolveDynamicComponent, h } from "vue";
 import importComponent from '@/utils/importComponent';
 
 export default defineComponent({
@@ -36,12 +36,13 @@ export default defineComponent({
       },
     },
   },
-  render () {
-  
-  if (!this.RoutedComponent) {
-    this.RoutedComponent = defineAsyncComponent(() => importComponent(this.component.url));
-  }
-    return resolveDynamicCompnent('RoutedComponent')
+  render() {
+
+    if (!this.RoutedComponent) {
+      this.RoutedComponent = defineAsyncComponent(() => importComponent(this.component.url));
+    }
+    const resolvedComponent = resolveDynamicComponent('RoutedComponent')
+    return h(resolvedComponent)
   },
 });
 </script>

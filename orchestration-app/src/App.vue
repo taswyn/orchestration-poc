@@ -61,7 +61,7 @@ const nav = {
  * 
  */
 
-
+// :props="NavigationProperties" 
 </script>
 
 <template>
@@ -71,7 +71,7 @@ const nav = {
       <Suspense>
         <template #default>
           <div>
-            <component :is="RoutedComponent" :component="nav" :props="NavigationProperties" />
+            <component :is="RoutedComponent" :component="nav" />
           </div>
         </template>
         <template #fallback>
