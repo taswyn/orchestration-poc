@@ -22,7 +22,7 @@
     "components" : [
         {
             "name": "Navigation",
-            "url": "http://localhost:8200/Navigation.umd.js"
+            "url": "http://localhost:8200/Navigation.es.js"
         }
     ]
 }

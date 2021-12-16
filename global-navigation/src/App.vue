@@ -6,8 +6,8 @@ import NavList from '@/components/NavList.vue'
 </script>
 
 <template>
-<div class="navnav">
-  <NavList />
+  <div class="navnav">
+    <NavList />
   </div>
 </template>
 

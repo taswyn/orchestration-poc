@@ -30,9 +30,9 @@ export default defineComponent({
     component: {
       immediate: true,
       handler(newComponent, prevComponent = '') {
-        if (newComponent.url === prevComponent.url) return;
-
-        this.RoutedComponent = defineAsyncComponent(() => importComponent(this.component.url));
+        if (typeof(this.component) !== "undefined" && newComponent.url !== prevComponent.url) {
+          this.RoutedComponent = defineAsyncComponent(() => importComponent(this.component.url));
+        }
       },
     },
   },

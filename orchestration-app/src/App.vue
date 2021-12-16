@@ -4,8 +4,10 @@
 import RoutedComponent from "@/components/RoutedComponent.vue";
 //import dynamicRouteSetup from "@/utils/dyanmicRouteSetup";
 import { useRouter, useRoute } from 'vue-router'
-import { ref } from 'vue'
-import { dynamicRouteSetup } from '@/router'
+import { ref, watchEffect } from 'vue'
+import dynamicRouteSetup from '@/utils/dynamicRouteSetup'
+import useApps from '@/composables/useApps'
+import useComponents from '@/composables/useComponents'
 
 const router = useRouter()
 
@@ -27,7 +29,7 @@ const router = useRouter()
     return appMap
 } */
 
-const appList = ref()
+/* const appList = ref()
 appList.value = null
 
 const setAppList = async () => {
@@ -37,8 +39,9 @@ const setAppList = async () => {
 
 setAppList()
 
-console.log(appList)
-const test = {
+console.log(appList) */
+
+/* const test = {
   name: "Application1",
   url: "http://localhost:8200/Application2.umd.js",
 };
@@ -50,28 +53,45 @@ const nav = {
   name: "GlobalNavigation",
   url: "http://localhost:8200/Navigation.umd.js",
 }
+ */
 
+
+const { componentsList, fetchComponents, navComponent } = useComponents()
+const { applicationsList, fetchApps } = useApps()
+
+fetchComponents()
+fetchApps(router)
+
+watchEffect(() => {
+  console.log(navComponent.value)
+  console.log(applicationsList.value)
+},
+  {
+    flush: 'post'
+  }
+)
 /****
- * notes: when msg is provided here, it overrides msg in GlobalNav 
+ * notes: when msg is provided here, it overrides msg in GlobalNav
  * even without it being a prop for App.vue
- * 
+ *
  * When msg is NOT provided here, it gets written by App.vue in GlobalNav
- * 
+ *
  * When the root element in GlobalNav's App.vue is NOT the component, msg goes on the root element instead!
- * 
+ *
  */
 
 // :props="NavigationProperties" 
 </script>
 
 <template>
-  <div v-if="appList">
+  <div v-if="applicationsList">
     test
     <nav>
       <Suspense>
         <template #default>
           <div>
-            <component :is="RoutedComponent" :component="nav" />
+            {{ navComponent }}
+            <component :is="RoutedComponent" :component="navComponent" />
           </div>
         </template>
         <template #fallback>
@@ -80,7 +100,8 @@ const nav = {
       </Suspense>
     </nav>
     <h1>Orchestration</h1>
-    <router-view :appList="appList"></router-view>
+    {{ applicationsList }}
+    <router-view :appList="applicationsList"></router-view>
   </div>
 </template>
 

@@ -3,9 +3,11 @@ import { defineAsyncComponent } from 'vue'
 import ComponentRouter from '@/components/RoutedComponent.vue'
 import PrimaryLayout from '@/views/PrimaryLayout.vue'
 import RoutedComponent from "@/components/RoutedComponent.vue";
+import dynamicRouteSetup from '@/utils/dynamicRouteSetup';
+import useApps from '@/composables/useApps';
 
 
-export async function dynamicRouteSetup(router) {
+/* export async function dynamicRouteSetup(router) {
     const applicationsList = await fetch('http://localhost:3075/applications').then(response => response.json())
 
     const appMap = new Map
@@ -40,7 +42,7 @@ export async function dynamicRouteSetup(router) {
     }
 
     return appMap
-}
+} */
 
 const hasNecessaryRoute = (to, router) => {
     const routeResolution = router.resolve(to)
@@ -85,7 +87,9 @@ const router = createRouter({
 router.beforeEach(async to => {
     console.log(to)
     if (!hasNecessaryRoute(to, router)) {
-        dynamicRouteSetup(router).then(
+        const { applicationsList, fetchApps } = useApps()
+        fetchApps()
+        dynamicRouteSetup(router, applicationsList).then(
             () => {
                 if (hasNecessaryRoute(to, router)) {
                     //router.replace(to.fullPath)
