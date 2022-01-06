@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  dev:
+    image: node:17
+    volumes: 
+      - .:./orchestration-app/
+    working_dir: ./orchestration-app/
+    command: npm run dev
+    ports:
+      - 3000:3000
+    

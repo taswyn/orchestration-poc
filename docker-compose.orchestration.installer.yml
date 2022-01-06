@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  x-base:
+    &default-base
+    image: node:17
+    volumes: 
+      - .:./orchestration-app/
+    working_dir: ./orchestration-app/
+  install: 
+    << : *default-base
+    command: npm i
+
+
+
+    
