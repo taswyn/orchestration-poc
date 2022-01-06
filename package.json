@@ -24,7 +24,8 @@
     "installapp1": "npm install --prefix ./component-app1 ./component-app1",
     "installapp2": "npm install --prefix ./component-app2 ./component-app2",
     "installglobalnav": "npm install --prefix ./global-navigation ./global-navigation",
-    "installorchestration": "npm install --prefix ./orchestration-app ./orchestration-app"
+    "installorchestration": "npm install --prefix ./orchestration-app ./orchestration-app",
+    "composeorchestration": "docker-compose -f docker-compose.orchestration.installer.yml run --rm install"
   },
   "devDependencies": {
     "concurrently": "^6.4.0",
